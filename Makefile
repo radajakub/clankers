@@ -1,4 +1,4 @@
-.PHONY: lint format check fix test build clean release
+.PHONY: lint format check fix test build clean release release-dry-run
 
 # Check lint and formatting (same checks as CI)
 lint:
@@ -29,8 +29,13 @@ build: clean
 clean:
 	rm -rf dist build
 
-# Cut a release: make release VERSION=1.2.0
+# Cut a release: make release VERSION=0.1.0
 # Bumps the version, tags it, and publishes a GitHub Release, which triggers the PyPI upload.
 release:
-	@test -n "$(VERSION)" || (echo "usage: make release VERSION=1.2.0" >&2; exit 1)
-	./scripts/release.sh $(VERSION)
+	@test -n "$(VERSION)" || (echo "usage: make release VERSION=0.1.0" >&2; exit 1)
+	uv run python scripts/release.py $(VERSION)
+
+# Print every step of a release without changing anything
+release-dry-run:
+	@test -n "$(VERSION)" || (echo "usage: make release-dry-run VERSION=0.1.0" >&2; exit 1)
+	uv run python scripts/release.py $(VERSION) --dry-run
