@@ -1,7 +1,7 @@
 [project]
 name = "clankers"
 version = "0.0.0"
-description = "Small Python library to automatically send notifications using the ntfy service"
+description = "Get notified when long-running commands and Python tasks finish"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"
@@ -17,12 +17,15 @@ classifiers = [
     "Topic :: System :: Monitoring",
     "Typing :: Typed",
 ]
-dependencies = []
+dependencies = ["python-dotenv>=1.2.1", "requests>=2.32.5"]
 
 [project.urls]
 Repository = "https://github.com/radajakub/clankers"
 Issues = "https://github.com/radajakub/clankers/issues"
 Changelog = "https://github.com/radajakub/clankers/blob/master/CHANGELOG.md"
+
+[project.scripts]
+clankers = "clankers.cli:main"
 
 [build-system]
 requires = ["hatchling"]
