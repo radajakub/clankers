@@ -1,0 +1,47 @@
+[project]
+name = "clankers"
+version = "0.0.0"
+description = "Small Python library to automatically send notifications using the ntfy service"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jakub Rada", email = "dev.jakubrada@icloud.com" }]
+keywords = ["ntfy", "notifications", "push-notifications", "alerts", "monitoring"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/radajakub/clankers"
+Issues = "https://github.com/radajakub/clankers/issues"
+Changelog = "https://github.com/radajakub/clankers/blob/master/CHANGELOG.md"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clankers"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 180
+target-version = "py313"
+
+[tool.ruff.lint]
+# Minimal set: pyflakes (F), essential pycodestyle errors (E4/E7/E9), import sorting (I).
+select = ["E4", "E7", "E9", "F", "I"]
+
+[dependency-groups]
+dev = ["pytest>=9.1.1", "ruff>=0.16.0"]
