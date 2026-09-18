@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.0.0] - 2026-09-18
+
 ### Added
 
 - Initial packaging: build with `uv build` and publish to PyPI from a GitHub Release.
