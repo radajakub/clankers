@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-18
+
 - Relax Python version to 3.12
 
 ## [1.0.0] - 2026-09-18
