@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-19
+
 ### Added
 
 - Add `blastthem`, a neutral notification level alongside `rogerroger` and `uhoh`, on `Clanker`, as
