@@ -57,9 +57,11 @@ after `--`) belongs to the wrapped command. The wrapped command keeps its standa
 Clankers reports its duration and result, then returns the command's exit code. Without `--message`
 the report is the command line itself. An unreachable notification server is silently ignored.
 
-Send a notification on its own — at the end of a shell script, or from a Makefile:
+Send a notification on its own — at the end of a shell script, or from a Makefile. There are three
+levels: `rogerroger` reports success, `blastthem` reports neutral progress, `uhoh` reports failure.
 
 ```bash
+clankers blastthem -m "deploy started"
 clankers rogerroger -m "deploy finished"
 clankers uhoh -m "deploy failed"
 ```
@@ -78,7 +80,8 @@ clankers: ntfy rejected the notification: 403 Forbidden {"code":40301,"error":"f
 
 ## Python
 
-The same helper works as a context manager or decorator:
+`clankers.Engage` wraps a block and reports around it: `Blast them` when the block starts, then
+`Roger, roger` or `Uh-oh` when it ends, with the duration.
 
 ```python
 import clankers
@@ -86,7 +89,51 @@ import clankers
 with clankers.Engage("Training"):
     train()
 
+with clankers.Engage("Training", announce=False):  # report only the outcome
+    train()
+```
 
+Each phase can build its message when it is sent, instead of naming it up front. Pass a callable
+that takes no arguments and returns the message; it reads whatever the surrounding scope holds at
+that moment. The failure builder receives the exception. A phase without a builder reports the
+message the context was created with.
+
+```python
+state = {"epoch": 0}
+
+with clankers.Engage(
+    "Training",
+    start=lambda: f"Training from epoch {state['epoch']}",
+    success=lambda: f"Training reached epoch {state['epoch']}",
+    failure=lambda exc: f"Training died at epoch {state['epoch']}: {exc}",
+):
+    for state["epoch"] in range(100):
+        train_one_epoch()
+```
+
+Builders run when the notification is sent, so `success` and `failure` report the final state of
+whatever they close over — that is the point of them, and it is up to the caller to keep that state
+readable. A builder that fails or returns nothing is logged and the plain message is sent instead;
+it never breaks the block it reports on.
+
+The block can also send notifications of its own while it runs, at any of the three levels. These
+are extra: the block still reports its own outcome when it exits.
+
+```python
+with clankers.Engage("Benchmark") as engage:
+    for matchup in matchups:
+        engage.blastthem(f"{matchup.name} starting")
+        try:
+            run(matchup)
+            engage.rogerroger(f"{matchup.name} complete")
+        except MatchupError as error:
+            engage.uhoh(f"{matchup.name} failed: {error}")
+```
+
+`clankers.engage` is the decorator form, for a whole function. It reports the start and the outcome
+of every call and takes nothing else; use the context manager when you want the rest.
+
+```python
 @clankers.engage("Training")
 def train(): ...
 
@@ -114,30 +161,36 @@ process. Point it somewhere else — or hand it a ready backend — with `config
 clankers.configure(config_path="./clankers.toml")
 ```
 
-For a process that reports to more than one topic, build clankers of your own; each one owns its
-backend and offers the same three entry points:
+For a process that reports to more than one topic, build clankers of your own; a `Clanker` owns a
+backend and sends notifications, and everything that wraps work takes one with `clanker=`:
 
 ```python
 training = clankers.Clanker(dotenv_path="./training.env")
 
-with training.engage("Epoch 1"):
+with clankers.Engage("Epoch 1", clanker=training):
     ...
+
+
+@clankers.engage("Evaluation", clanker=training)
+def evaluate(): ...
+
 
 training.rogerroger("Checkpoint uploaded")
 ```
 
-`clankers.Engage`, `engage`, `rogerroger` and `uhoh` always report through the shared clanker; every
-configuration option lives on `Clanker` and `configure()`.
+`clankers.Engage`, `engage`, `rogerroger`, `blastthem` and `uhoh` report through the shared clanker
+unless a clanker is named; every configuration option lives on `Clanker` and `configure()`.
 
 For work clankers does not wrap itself, send a notification by hand:
 
 ```python
+clankers.blastthem("Epoch 40 of 100")
 clankers.rogerroger("Checkpoint uploaded")
 clankers.uhoh("Validation loss diverged", duration=4200)
 ```
 
-Both accept the same `config_path=` / `dotenv_path=` / `backend=` keywords and, like everything else,
-only warn when the notification cannot be delivered.
+All three take the same optional `duration=` and, like everything else, only warn when the
+notification cannot be delivered.
 
 ## Development
 

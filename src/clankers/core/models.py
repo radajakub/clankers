@@ -2,13 +2,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from socket import gethostname
+from typing import Literal
+
+Status = Literal["rogerroger", "blastthem", "uhoh"]
+
+_LABELS: dict[Status, str] = {
+    "rogerroger": "Roger, roger",
+    "blastthem": "Blast them!",
+    "uhoh": "Uh-oh",
+}
 
 
 @dataclass(frozen=True, slots=True)
 class Event:
     message: str
-    success: bool
-    duration: float | None
+    status: Status
+    duration: float | None = None
     hostname: str = field(default_factory=gethostname)
 
     def __post_init__(self) -> None:
@@ -16,18 +25,20 @@ class Event:
             raise ValueError("event message cannot be empty")
 
     @staticmethod
-    def uhoh(message: str, duration: float | None) -> Event:
-        return Event(message, False, duration)
+    def of(status: Status, message: str, duration: float | None = None) -> Event:
+        return Event(message, status, duration)
 
     @staticmethod
-    def rogerroger(message: str, duration: float | None) -> Event:
-        return Event(message, True, duration)
+    def rogerroger(message: str, duration: float | None = None) -> Event:
+        return Event(message, "rogerroger", duration)
 
-    @classmethod
-    def from_exception(cls, message: str, duration: float | None, exc: BaseException | None) -> Event:
-        if exc is None:
-            return cls.rogerroger(message, duration)
-        return cls.uhoh(f"{message}: {_describe(exc)}", duration)
+    @staticmethod
+    def blastthem(message: str, duration: float | None = None) -> Event:
+        return Event(message, "blastthem", duration)
+
+    @staticmethod
+    def uhoh(message: str, duration: float | None = None) -> Event:
+        return Event(message, "uhoh", duration)
 
     @classmethod
     def from_exit_code(cls, command: str, duration: float | None, exit_code: int, exc: OSError | None = None) -> Event:
@@ -37,15 +48,14 @@ class Event:
 
         message = f"{command} (exit code {exit_code})"
 
-        return cls.uhoh(message if exc is None else f"{message}: {_describe(exc)}", duration)
+        return cls.uhoh(message if exc is None else f"{message}: {describe(exc)}", duration)
 
     def to_string(self) -> str:
-        status = "Roger, roger" if self.success else "Uh-oh"
         duration = "" if self.duration is None else f" [{format_duration(self.duration)}]"
-        return f"({self.hostname}){duration} {status}: {self.message}"
+        return f"({self.hostname}){duration} {_LABELS[self.status]}: {self.message}"
 
 
-def _describe(exc: BaseException) -> str:
+def describe(exc: BaseException) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 

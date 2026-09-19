@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 import requests
 
 from clankers.backends.backend import Backend
-from clankers.models import Event
-from clankers.utils import optional_string, required_string
+from clankers.config import optional_string, required_string
+from clankers.core.models import Event
 
 logger = logging.getLogger(__name__)
 
