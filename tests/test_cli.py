@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from clankers import cli
-from clankers.models import Event
+from clankers.core.models import Event
 
 
 class RecordingBackend:
@@ -32,7 +32,7 @@ def isolate_cli_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 @pytest.fixture
 def backend(monkeypatch: pytest.MonkeyPatch) -> type[RecordingBackend]:
-    monkeypatch.setattr("clankers.core.NtfyBackend", RecordingBackend)
+    monkeypatch.setattr("clankers.core.clanker.NtfyBackend", RecordingBackend)
     return RecordingBackend
 
 
@@ -41,7 +41,7 @@ def test_engage_returns_command_exit_code_and_reports_success(backend: type[Reco
 
     assert exit_code == 0
     [event] = backend.events
-    assert event.success is True
+    assert event.status == "rogerroger"
     assert event.message.endswith("raise SystemExit(0)'")
     assert not hasattr(event, "topic")
 
@@ -50,7 +50,7 @@ def test_engage_preserves_failure_exit_code(backend: type[RecordingBackend]) -> 
     exit_code = cli.main(["engage", sys.executable, "-c", "raise SystemExit(7)"])
 
     assert exit_code == 7
-    assert backend.events[0].success is False
+    assert backend.events[0].status == "uhoh"
     assert backend.events[0].message.endswith("(exit code 7)")
 
 
@@ -72,16 +72,19 @@ def test_engage_separates_its_flags_from_the_command(backend: type[RecordingBack
     exit_code = cli.main(["engage", "--", sys.executable, "-c", "import sys; sys.exit(len(sys.argv) - 1)"])
 
     assert exit_code == 0
-    assert backend.events[0].success is True
+    assert backend.events[0].status == "rogerroger"
 
 
-def test_manual_notifications_report_both_outcomes(backend: type[RecordingBackend]) -> None:
+def test_manual_notifications_report_every_status(backend: type[RecordingBackend]) -> None:
     assert cli.main(["rogerroger", "-m", "deploy finished"]) == 0
+    assert cli.main(["blastthem", "-m", "deploy started"]) == 0
     assert cli.main(["uhoh", "--message", "deploy failed"]) == 0
 
-    success, failure = backend.events
-    assert (success.message, success.success, success.duration) == ("deploy finished", True, None)
-    assert (failure.message, failure.success, failure.duration) == ("deploy failed", False, None)
+    assert [(event.status, event.message, event.duration) for event in backend.events] == [
+        ("rogerroger", "deploy finished", None),
+        ("blastthem", "deploy started", None),
+        ("uhoh", "deploy failed", None),
+    ]
 
 
 def test_manual_notifications_require_a_message(backend: type[RecordingBackend]) -> None:

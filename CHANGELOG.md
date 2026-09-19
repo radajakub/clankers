@@ -6,6 +6,37 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- Add `blastthem`, a neutral notification level alongside `rogerroger` and `uhoh`, on `Clanker`, as
+  a module-level function, as a CLI action, and inside a context manager.
+- Announce the start of every context manager and decorated function with a `blastthem`
+  notification; `announce=False` reports only the outcome. `clankers engage` is unchanged.
+- Build the message of each phase when it is sent: `Engage` takes `start`, `success` and `failure`
+  callables that read the surrounding scope, with `failure` receiving the exception. A builder that
+  fails or returns nothing is logged and the plain message is sent instead.
+- Add `Engage.rogerroger`, `Engage.blastthem` and `Engage.uhoh` so a block can send extra
+  notifications while it runs; the report the block sends when it exits is unaffected.
+- Add `Clanker.notify` and `Event.of` to send any level without picking a named helper.
+
+### Changed
+
+- Replace `Event.success` with `Event.status`, one of `rogerroger`, `blastthem` or `uhoh`.
+- Split the package by responsibility: `clankers.core` holds the event model, the `Clanker` and the
+  context manager, `clankers.default` owns the shared clanker and the module-level notifications,
+  and `clankers.decorators` the decorator. Importing from `clankers` itself is unchanged.
+- Separate the decorator from the context manager: `clankers.engage` is now the decorator and
+  `clankers.Engage` the context manager, and both take an optional `clanker=`. `Engage` no longer
+  decorates, and its message is required.
+
+### Removed
+
+- Remove `Event.from_exception`; a context manager describes its own failures and `describe` renders
+  an exception for anything else.
+- Remove `Clanker.engage`; name the clanker where the work is wrapped instead, with
+  `clankers.Engage(..., clanker=yours)` or `@clankers.engage(..., clanker=yours)`.
+- Remove `clankers.utils`; `required_string` and `optional_string` moved to `clankers.config`.
+
 ## [1.0.1] - 2026-09-18
 
 - Relax Python version to 3.12

@@ -4,13 +4,19 @@ from socket import gethostname
 
 import pytest
 
-from clankers.models import Event, format_duration
+from clankers.core.models import Event, format_duration
 
 
 def test_success_event_renders_host_duration_and_message() -> None:
     event = Event.rogerroger("pytest", 134)
 
     assert event.to_string() == f"({gethostname()}) [2m 14s] Roger, roger: pytest"
+
+
+def test_neutral_event_renders_its_own_label() -> None:
+    event = Event.blastthem("pytest started")
+
+    assert event.to_string() == f"({gethostname()}) Blast them!: pytest started"
 
 
 def test_event_without_duration_renders_without_brackets() -> None:
@@ -24,31 +30,21 @@ def test_empty_message_is_rejected() -> None:
         Event.rogerroger("  ", None)
 
 
-def test_from_exception_reports_success_without_an_exception() -> None:
-    event = Event.from_exception("Training", 3.0, None)
-
-    assert event.success is True
-    assert event.message == "Training"
-
-
-def test_from_exception_describes_the_failure() -> None:
-    event = Event.from_exception("Training", 3.0, RuntimeError("broken"))
-
-    assert event.success is False
-    assert event.message == "Training: RuntimeError: broken"
+def test_of_builds_any_status() -> None:
+    assert Event.of("blastthem", "halfway", 3.0).status == "blastthem"
 
 
 def test_from_exit_code_reports_success_for_zero() -> None:
     event = Event.from_exit_code("pytest", 1.0, 0)
 
-    assert event.success is True
+    assert event.status == "rogerroger"
     assert event.message == "pytest"
 
 
 def test_from_exit_code_reports_the_failing_status() -> None:
     event = Event.from_exit_code("pytest", 1.0, 7)
 
-    assert event.success is False
+    assert event.status == "uhoh"
     assert event.message == "pytest (exit code 7)"
 
 

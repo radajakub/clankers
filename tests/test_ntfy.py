@@ -7,7 +7,7 @@ import pytest
 import requests
 
 from clankers.backends.ntfy import NtfyBackend
-from clankers.models import Event
+from clankers.core.models import Event
 
 
 class Response:
@@ -49,7 +49,7 @@ def test_omits_authorization_header_without_token(monkeypatch: pytest.MonkeyPatc
         return Response()
 
     monkeypatch.setattr("clankers.backends.ntfy.requests.post", fake_post)
-    NtfyBackend("https://ntfy.example.com", "jobs").send(Event(message="job finished", success=True, duration=0))
+    NtfyBackend("https://ntfy.example.com", "jobs").send(Event(message="job finished", status="rogerroger", duration=0))
 
     assert headers == [{"User-Agent": "clankers"}]
 
@@ -62,7 +62,7 @@ def test_backend_topic_is_used_in_publish_url(monkeypatch: pytest.MonkeyPatch) -
         return Response()
 
     monkeypatch.setattr("clankers.backends.ntfy.requests.post", fake_post)
-    NtfyBackend("https://ntfy.example.com", "special").send(Event(message="job finished", success=True, duration=0))
+    NtfyBackend("https://ntfy.example.com", "special").send(Event(message="job finished", status="rogerroger", duration=0))
     assert urls == ["https://ntfy.example.com/special"]
 
 
@@ -71,7 +71,7 @@ def test_missing_topic_is_a_silent_noop(monkeypatch: pytest.MonkeyPatch) -> None
         pytest.fail("an unconfigured backend must not make a request")
 
     monkeypatch.setattr("clankers.backends.ntfy.requests.post", unexpected_post)
-    NtfyBackend("https://ntfy.example.com").send(Event(message="job finished", success=True, duration=0))
+    NtfyBackend("https://ntfy.example.com").send(Event(message="job finished", status="rogerroger", duration=0))
 
 
 def test_unreachable_server_is_a_silent_noop(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -79,7 +79,7 @@ def test_unreachable_server_is_a_silent_noop(monkeypatch: pytest.MonkeyPatch) ->
         raise requests.ConnectionError("offline")
 
     monkeypatch.setattr("clankers.backends.ntfy.requests.post", offline)
-    NtfyBackend("https://ntfy.example.com", "jobs").send(Event(message="job finished", success=True, duration=0))
+    NtfyBackend("https://ntfy.example.com", "jobs").send(Event(message="job finished", status="rogerroger", duration=0))
 
 
 def test_builds_backend_from_its_own_configuration() -> None:

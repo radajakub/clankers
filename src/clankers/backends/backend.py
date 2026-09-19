@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from clankers.models import Event
+from clankers.core.models import Event
 
 
 class Backend(Protocol):

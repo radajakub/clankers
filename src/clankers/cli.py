@@ -10,10 +10,17 @@ import sys
 import time
 from collections.abc import Sequence
 from importlib import metadata
+from typing import cast
 
 from clankers.config import ConfigError
-from clankers.core import Clanker
-from clankers.models import Event
+from clankers.core.clanker import Clanker
+from clankers.core.models import Event, Status
+
+MANUAL_ACTIONS: dict[Status, str] = {
+    "rogerroger": "send a success notification",
+    "blastthem": "send a neutral notification",
+    "uhoh": "send a failure notification",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="command and arguments to run, optionally preceded by --",
     )
 
-    for action, help_text in (("rogerroger", "send a success notification"), ("uhoh", "send a failure notification")):
+    for action, help_text in MANUAL_ACTIONS.items():
         manual_parser = actions.add_parser(action, parents=[_settings_parser()], help=help_text)
         manual_parser.add_argument("-m", "--message", required=True, help="what to report")
 
@@ -69,10 +76,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.action == "engage":
         return _engage(clanker, command, args.message)
 
-    if args.action == "rogerroger":
-        clanker.rogerroger(args.message)
-    else:
-        clanker.uhoh(args.message)
+    clanker.notify(cast(Status, args.action), args.message)
     return 0
 
 
