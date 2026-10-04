@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [3.0.2] - 2026-10-04
+
 ### Fixed
 
 - The CLIs reject an empty or whitespace-only `--message` with exit code 2 before running work.
