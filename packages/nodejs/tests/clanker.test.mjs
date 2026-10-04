@@ -54,9 +54,13 @@ test("explicit configuration overrides environment; environment is loaded once l
 test("missing configuration never prevents wrapped work", async () => {
   const warnings = [];
   const clanker = new api.Clanker({ ...isolated, env: {}, logger: { warn: (message) => warnings.push(message) } });
-  assert.throws(() => clanker.backend, /NTFY_URL/);
+  assert.throws(
+    () => clanker.backend,
+    (error) => error instanceof api.ConfigError && /NTFY_URL/.test(error.message),
+  );
   assert.equal(await clanker.engage("Work", () => 42), 42);
   assert.equal(warnings.length, 2);
+  assert.match(warnings[0], /could not send notification: ConfigError: missing required configuration value NTFY_URL/);
   assert.throws(() => new api.Clanker({ theme: "missing" }), /theme/);
 });
 
@@ -195,6 +199,17 @@ test("bad builders fall back and delivery or logging errors do not replace resul
     clanker.engage(" ", () => assert.fail("must not run")),
     /empty/,
   );
+});
+
+test("errors without a message are described by their name", async () => {
+  const { clanker, events } = recording();
+  await assert.rejects(
+    clanker.engage("Work", () => {
+      throw new RangeError();
+    }),
+    RangeError,
+  );
+  assert.equal(events.at(-1).message, "Work: RangeError");
 });
 
 test("concurrent invocations retain their own outcomes and builders", async () => {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
 import pytest
 from conftest import RecordingBackend
@@ -74,6 +75,31 @@ def test_async_decorator_waits_for_coroutine() -> None:
 
     assert asyncio.run(work()) == "done"
     assert backend.reported[-1] == ("rogerroger", "Async work")
+
+
+def test_async_decorator_sends_without_blocking_the_event_loop() -> None:
+    class SlowBackend(RecordingBackend):
+        def send(self, event: Event) -> None:
+            time.sleep(0.2)
+            super().send(event)
+
+    backend = SlowBackend()
+
+    @clankers.engage("Async work", clanker=clankers.Clanker(backend=backend))
+    async def work() -> None:
+        await asyncio.sleep(0)
+
+    async def ticker() -> float:
+        started = time.monotonic()
+        await asyncio.sleep(0.05)
+        return time.monotonic() - started
+
+    async def main() -> float:
+        elapsed, _ = await asyncio.gather(ticker(), work())
+        return elapsed
+
+    assert asyncio.run(main()) < 0.15
+    assert backend.reported == [("blastthem", "Async work"), ("rogerroger", "Async work")]
 
 
 def test_notification_error_does_not_hide_a_successful_result() -> None:

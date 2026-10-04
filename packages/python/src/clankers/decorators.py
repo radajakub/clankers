@@ -19,7 +19,7 @@ def engage(message: str | None = None, *, clanker: Clanker | None = None) -> Cal
 
             @wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                with Engage(label, clanker=clanker):
+                async with Engage(label, clanker=clanker):
                     return await coroutine_func(*args, **kwargs)
 
             return cast(F, async_wrapper)

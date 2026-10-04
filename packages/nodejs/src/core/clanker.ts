@@ -3,7 +3,7 @@ import { NtfyBackend } from "../backends/ntfy.js";
 import { configuredTheme, loadConfig, ntfyOptions, type Config, type Configuration } from "../config.js";
 import { defaultLogger, log, type Logger } from "../logging.js";
 import { run, type EngageOptions } from "./engage.js";
-import { Event } from "./models.js";
+import { describe, Event } from "./models.js";
 import { validatedTheme, type Status, type Theme } from "./themes.js";
 
 export interface ClankerOptions extends Configuration {
@@ -43,8 +43,8 @@ export class Clanker {
   public async send(event: Event): Promise<void> {
     try {
       await this.backend.send(new Event({ ...event, theme: this.theme }));
-    } catch {
-      log(this.logger, "warn", "could not send notification; check configuration and backend");
+    } catch (error) {
+      log(this.logger, "warn", `could not send notification: ${describe(error)}`);
     }
   }
 

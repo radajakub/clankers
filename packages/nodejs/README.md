@@ -52,8 +52,9 @@ to the command. Child input and output pass through unchanged. Relative configur
 and `.env` discovery use the directory where you run the CLI.
 
 `engage` sends one completion notification and preserves the command's exit code.
-An executable that cannot start returns 127; invalid arguments or configuration return 2
-before running work. Delivery failures do not replace the command's exit code.
+An executable that cannot start returns 127; invalid arguments, an empty `--message`, or
+invalid configuration return 2 before running work. Delivery failures do not replace the
+command's exit code. `SIGINT` and `SIGTERM` are forwarded to the command, which is still reported.
 On Unix, a command terminated by a signal returns `128 + signal number`.
 Commands execute directly, so invoke your shell explicitly when you need shell syntax.
 
@@ -106,13 +107,13 @@ interpolation in `.env` uses earlier file values and environment values.
 Explicit Node.js options override the merged configuration. A client reads its configuration
 lazily once, at first use. There are no implicit server or topic defaults.
 
-| Option      | Environment variable     | Default                                    |
-| ----------- | ------------------------ | ------------------------------------------ |
-| `url`       | `NTFY_URL`               | Required                                   |
-| `topic`     | `NTFY_TOPIC`             | Required                                   |
-| `token`     | `NTFY_TOKEN`             | None; an explicit empty string disables it |
-| `timeoutMs` | `NTFY_TIMEOUT` (seconds) | 10,000 milliseconds                        |
-| `theme`     | `CLANKERS_THEME`         | `neutral`                                  |
+| Option      | Environment variable             | Default                                    |
+| ----------- | -------------------------------- | ------------------------------------------ |
+| `url`       | `NTFY_URL`                       | Required                                   |
+| `topic`     | `NTFY_TOPIC`                     | Required                                   |
+| `token`     | `NTFY_TOKEN`                     | None; an explicit empty string disables it |
+| `timeoutMs` | `NTFY_TIMEOUT` (decimal seconds) | 10,000 milliseconds                        |
+| `theme`     | `CLANKERS_THEME`                 | `neutral`                                  |
 
 Select different files with `configPath` and `dotenvPath`, just as Python exposes
 `config_path` and `dotenv_path`:
@@ -191,6 +192,8 @@ classes and default client. Multiple topics can use separate `Clanker` instances
 A custom `Backend` implements `send(event: Event): void | Promise<void>`. Supply it with
 `new Clanker({ backend })`. `Event.toString()` renders notification text; `isSuccess()`,
 `isInfo()`, and `isFailure()` identify its status. `NtfyBackend` is also exported for direct use.
+Configuration requires a topic, but an `NtfyBackend` built in code may omit it; it then logs a
+warning and drops each notification.
 
 The optional `logger` implements `warn(message: string)` and optionally `debug(message: string)`.
 By default warnings go to the console and debug logging is disabled. Transport diagnostics

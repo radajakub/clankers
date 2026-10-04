@@ -60,7 +60,8 @@ class Event:
 
 
 def describe(exc: BaseException) -> str:
-    return f"{type(exc).__name__}: {exc}"
+    detail = str(exc)
+    return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
 
 
 def format_duration(seconds: float) -> str:

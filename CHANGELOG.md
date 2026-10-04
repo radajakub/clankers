@@ -6,6 +6,24 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Fixed
+
+- The CLIs reject an empty or whitespace-only `--message` with exit code 2 before running work.
+  Python previously crashed after the command finished; Node.js replaced the command's exit code.
+- The Python CLI forwards `SIGINT` and `SIGTERM` to the wrapped command and still reports it.
+- Python's async decorator no longer blocks the event loop while sending; `Engage` supports `async with`.
+- Both packages accept only plain decimal `NTFY_TIMEOUT` values, so `1_0`, `0x10`, and `1e3` are
+  rejected consistently.
+- Node.js warnings for failed notifications include the cause, and missing `NTFY_URL` or `NTFY_TOPIC`
+  raises `ConfigError`. Failures to discard a response body are no longer reported as unreachable servers.
+- CI tests Python 3.12, the documented minimum, as well as 3.13.
+- The Node.js CLI exits with 2 only for invalid arguments or configuration, never after the command starts.
+- Errors without a message are described by their type alone, without a trailing colon.
+
+### Changed
+
+- npm dependencies use compatible version ranges instead of exact versions.
+
 ## [3.0.1] - 2026-10-04
 
 ### Added

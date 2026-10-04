@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
+import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -175,6 +179,33 @@ def test_version_is_reported(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_signal_return_code_uses_shell_convention() -> None:
     assert cli._shell_exit_code(-15) == 143
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+@pytest.mark.parametrize("signum", [signal.SIGINT, signal.SIGTERM], ids=["SIGINT", "SIGTERM"])
+def test_wrapper_forwards_signals_and_reports_the_command(tmp_path: Path, signum: signal.Signals) -> None:
+    ready = tmp_path / "ready"
+    # Restore default handling: a shell may start background jobs with SIGINT ignored.
+    script = f"import pathlib, signal, time; signal.signal({int(signum)}, signal.SIG_DFL); pathlib.Path({str(ready)!r}).touch(); time.sleep(30)"
+    env = {**os.environ, "PYTHONPATH": str(PACKAGE / "src"), "NTFY_URL": "http://127.0.0.1:1", "NTFY_TOPIC": "jobs", "NTFY_TIMEOUT": "1"}
+    wrapper = subprocess.Popen(
+        [sys.executable, "-m", "clankers.cli", "engage", "-v", "-m", "Interrupted", "--", sys.executable, "-c", script],
+        env=env,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        deadline = time.monotonic() + 10
+        while not ready.exists():
+            assert time.monotonic() < deadline, "the wrapped command did not start"
+            time.sleep(0.01)
+        wrapper.send_signal(signum)
+        _, stderr = wrapper.communicate(timeout=10)
+    finally:
+        wrapper.kill()
+
+    assert wrapper.returncode == 128 + signum
+    assert f"Failed: Interrupted (exit code -{int(signum)})" in stderr
 
 
 @pytest.mark.parametrize("case", CLI_CASES, ids=[case["name"] for case in CLI_CASES])

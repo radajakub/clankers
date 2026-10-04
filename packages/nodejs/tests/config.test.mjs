@@ -67,3 +67,22 @@ test("invalid TOML and non-string backend settings are rejected without leaking 
   await writeFile(configPath, '[ntfy]\nurl = "https://ntfy.example.com"\ntopic = "jobs"\ntimeout = 4\n');
   assert.throws(() => new Clanker({ configPath, dotenvPath, env: {} }).backend, /NTFY_TIMEOUT must be a string/);
 });
+
+test("NTFY_TIMEOUT accepts only plain decimal seconds, as in Python", () => {
+  const options = { configPath: "missing.toml", dotenvPath: "missing.env" };
+  const env = { NTFY_URL: "https://ntfy.sh", NTFY_TOPIC: "jobs" };
+  for (const [timeout, timeoutMs] of [
+    ["4", 4000],
+    ["2.5", 2500],
+    [".5", 500],
+    [" 3 ", 3000],
+  ]) {
+    assert.equal(new Clanker({ ...options, env: { ...env, NTFY_TIMEOUT: timeout } }).backend.timeoutMs, timeoutMs);
+  }
+  for (const timeout of ["-1", "nan", "inf", "1_0", "0x10", "1e3", "4.5s"]) {
+    assert.throws(
+      () => new Clanker({ ...options, env: { ...env, NTFY_TIMEOUT: timeout } }).backend,
+      (error) => error instanceof ConfigError && /NTFY_TIMEOUT/.test(error.message),
+    );
+  }
+});

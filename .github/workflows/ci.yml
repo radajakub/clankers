@@ -11,8 +11,11 @@ concurrency:
 
 jobs:
   python:
-    name: Python
+    name: Python (${{ matrix.python }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +25,7 @@ jobs:
           enable-cache: true
 
       - name: Sync dependencies
-        run: uv sync --project packages/python --group dev --python 3.13
+        run: uv sync --project packages/python --group dev --python ${{ matrix.python }}
 
       - name: Lint and format check
         run: make check-python

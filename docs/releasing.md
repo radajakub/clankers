@@ -36,16 +36,19 @@ Create a GitHub environment named `npm`. Verify that your npm account owns the `
 scope before publishing `@radajakub/clankers`.
 
 npm Trusted Publishing is configured in an existing package's settings. Bootstrap the npm
-package once at the current shared `3.0.0` version, matching the already published Python release:
+package once at the current shared version, matching the Python release. After local validation,
+the root `dist/nodejs/` directory should contain one archive:
 
 ```bash
 npm login
 npm whoami # Must report radajakub
-npm publish dist/nodejs/radajakub-clankers-3.0.0.tgz --access public --ignore-scripts
+npm publish dist/nodejs/*.tgz --access public --ignore-scripts
 ```
 
 Run local validation first, then run these commands from the repository root when ready to publish.
-The bootstrap publish fills in the npm counterpart to Python `3.0.0`; future releases are paired.
+The bootstrap publish fills in the npm counterpart to the Python release; future releases are paired.
+If a GitHub Release has already failed at npm publication, use its uploaded `nodejs-dist` artifact
+as described below instead of rebuilding the archive.
 
 After bootstrapping, configure the npm package's trusted publisher:
 
@@ -54,6 +57,12 @@ After bootstrapping, configure the npm package's trusted publisher:
 - Workflow filename: `publish.yml`
 - Environment: `npm`
 - Allow direct `npm publish`
+
+Open the npm package page, select **Settings**, find **Trusted Publisher**, and choose
+**GitHub Actions**. Enter only `publish.yml`, without `.github/workflows/`, in the workflow field.
+The environment must match the job's `environment: npm`. Save the configuration before retrying.
+No GitHub `NPM_TOKEN` secret is needed for this workflow. A local `npm login` does not authorize
+a GitHub Actions runner.
 
 The npm publish job uses a GitHub-hosted runner, Node.js 24, npm 11.19.1, and `id-token: write`.
 It needs no stored npm publish token. Public packages from public repositories receive automatic
@@ -85,6 +94,22 @@ existing trusted publisher remains valid.
 Publishing to two registries is not atomic. One may succeed while the other fails.
 Fix the external configuration issue and rerun the failed publish job for the same release;
 do not bump one package or create another tag to repair it.
+
+For a first npm publication that failed because the package and its trusted publisher do not yet
+exist, download the original archive from the failed run's **Artifacts** section (`nodejs-dist`).
+You can also download it with the GitHub CLI, replacing `RUN_ID` with that run's numeric ID:
+
+```bash
+gh run download RUN_ID --repo radajakub/clankers --name nodejs-dist --dir /tmp/clankers-npm-recovery
+npm login
+npm whoami # Must report radajakub
+npm publish /tmp/clankers-npm-recovery/*.tgz --access public --ignore-scripts
+```
+
+Use an empty download directory. The `npm publish` command publishes the release artifact for real.
+Then configure the trusted publisher in npm settings and use **Re-run failed jobs** on the original
+GitHub run. The npm job recognizes the identical manually published archive and skips it. Future
+releases authenticate through OIDC.
 
 PyPI skips distributions that already exist. npm checks an existing version's SHA-512 archive
 integrity and skips it only if the uploaded archive matches exactly. A different archive fails
