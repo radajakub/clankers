@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node.js dependencies and package archives
+node_modules/
+*.tgz
