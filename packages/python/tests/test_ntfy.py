@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 import pytest
@@ -12,8 +14,13 @@ from clankers.core.models import Event
 
 class Response:
     status_code = 200
+    closed = False
 
-    def raise_for_status(self) -> None:
+    def __enter__(self) -> Response:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.closed = True
         return None
 
 
@@ -33,9 +40,12 @@ def test_sends_plain_text_publish_request_with_bearer_token(monkeypatch: pytest.
 
     assert captured["url"] == "https://ntfy.example.com/builds"
     assert captured["timeout"] == 3
+    assert captured["allow_redirects"] is False
+    assert captured["stream"] is True
     assert captured["headers"] == {
         "Authorization": "Bearer secret-token",
         "User-Agent": "clankers",
+        "Content-Type": "text/plain; charset=utf-8",
     }
     assert captured["data"] == event.to_string().encode()
     assert "secret-token" not in repr(backend)
@@ -51,7 +61,7 @@ def test_omits_authorization_header_without_token(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr("clankers.backends.ntfy.requests.post", fake_post)
     NtfyBackend("https://ntfy.example.com", "jobs").send(Event(message="job finished", status="rogerroger", duration=0))
 
-    assert headers == [{"User-Agent": "clankers"}]
+    assert headers == [{"User-Agent": "clankers", "Content-Type": "text/plain; charset=utf-8"}]
 
 
 def test_backend_topic_is_used_in_publish_url(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -123,22 +133,22 @@ def test_failure_payload_has_compact_visible_status(monkeypatch: pytest.MonkeyPa
     assert payloads == [event.to_string().encode()]
 
 
-def test_rejection_is_logged_with_the_server_response(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
-    class Rejected:
+def test_rejection_is_logged_without_reading_response_secrets(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    class Rejected(Response):
         status_code = 403
-        reason = "Forbidden"
-        text = '{"code":40301,"error":"forbidden"}'
 
-        def raise_for_status(self) -> None:
-            raise requests.HTTPError(response=self)
+        @property
+        def text(self) -> str:
+            pytest.fail("server response bodies must not be read or logged")
 
-    monkeypatch.setattr("clankers.backends.ntfy.requests.post", lambda url, **kwargs: Rejected())
+    response = Rejected()
+    monkeypatch.setattr("clankers.backends.ntfy.requests.post", lambda url, **kwargs: response)
 
     with caplog.at_level(logging.WARNING, logger="clankers.backends.ntfy"):
         NtfyBackend("https://ntfy.example.com", "jobs").send(Event.rogerroger("job finished", 1))
 
-    assert "403 Forbidden" in caplog.text
-    assert "forbidden" in caplog.text
+    assert "ntfy rejected the notification: 403" in caplog.text
+    assert response.closed
 
 
 def test_unreachable_server_is_logged(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
@@ -158,3 +168,65 @@ def test_missing_topic_is_logged(caplog: pytest.LogCaptureFixture) -> None:
         NtfyBackend("https://ntfy.example.com").send(Event.rogerroger("job finished", 1))
 
     assert "no ntfy topic configured" in caplog.text
+
+
+@pytest.mark.parametrize("timeout", [float("nan"), float("inf"), float("-inf"), True, "3"])
+def test_rejects_unusable_direct_timeouts(timeout: Any) -> None:
+    with pytest.raises(ValueError, match="timeout"):
+        NtfyBackend("https://ntfy.sh", "jobs", timeout=timeout)
+
+
+@pytest.mark.parametrize("topic", [0, False, [], {}])
+def test_rejects_non_string_topics(topic: Any) -> None:
+    with pytest.raises(ValueError, match="NTFY_TOPIC"):
+        NtfyBackend("https://ntfy.sh", topic=topic)
+
+
+@pytest.mark.parametrize("timeout", ["0", "-1", "nan", "inf", "2147483.648"])
+def test_validates_timeouts_from_configuration(timeout: str) -> None:
+    with pytest.raises(ValueError, match="timeout"):
+        NtfyBackend.from_config({"NTFY_URL": "https://ntfy.sh", "NTFY_TOPIC": "jobs", "NTFY_TIMEOUT": timeout})
+
+
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+def test_redirect_is_rejected_without_a_second_request(status: int, caplog: pytest.LogCaptureFixture) -> None:
+    received: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            received.append(self.path)
+            self.send_response(status)
+            self.send_header("Location", "/redirected")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_GET(self) -> None:
+            self.do_POST()
+
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+    thread.start()
+    try:
+        with caplog.at_level(logging.DEBUG, logger="clankers.backends.ntfy"):
+            NtfyBackend(f"http://127.0.0.1:{server.server_port}", "jobs", timeout=1).send(Event.rogerroger("Work"))
+        assert received == ["/jobs"]
+        assert f"ntfy rejected the notification: {status}" in caplog.text
+        assert "accepted" not in caplog.text
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_network_errors_do_not_log_exception_secrets(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    def offline(*args: object, **kwargs: object) -> None:
+        raise requests.ConnectionError("secret-token")
+
+    monkeypatch.setattr("clankers.backends.ntfy.requests.post", offline)
+    NtfyBackend("https://ntfy.sh", "jobs", token="secret-token").send(Event.rogerroger("Work"))
+
+    assert "could not reach ntfy" in caplog.text
+    assert "secret-token" not in caplog.text

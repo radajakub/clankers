@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from clankers import cli
 from clankers.core.models import Event
+
+PACKAGE = Path(__file__).resolve().parents[1]
+CONTRACTS = PACKAGE / "contracts" / "cli.json"
+if not CONTRACTS.is_file():
+    CONTRACTS = PACKAGE.parent.parent / "contracts" / "cli.json"
+CLI_CASES = json.loads(CONTRACTS.read_text(encoding="utf-8"))
 
 
 class RecordingBackend:
@@ -145,6 +153,18 @@ def test_cli_reports_unusable_configuration(monkeypatch: pytest.MonkeyPatch, cap
     assert "NTFY_URL" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("key,value", [("NTFY_URL", "https://user:secret@example.com"), ("NTFY_TOPIC", "../other"), ("NTFY_TIMEOUT", "nan")])
+def test_cli_rejects_invalid_backend_settings_before_running_work(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], key: str, value: str) -> None:
+    monkeypatch.setenv("NTFY_URL", "https://ntfy.sh")
+    monkeypatch.setenv("NTFY_TOPIC", "jobs")
+    monkeypatch.setenv("NTFY_TIMEOUT", "10")
+    monkeypatch.setenv(key, value)
+    monkeypatch.setattr(cli, "_run", lambda command: pytest.fail("invalid settings must be rejected before running work"))
+
+    assert cli.main(["engage", sys.executable, "-c", "pass"]) == 2
+    assert "secret" not in capsys.readouterr().err
+
+
 def test_version_is_reported(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exit_info:
         cli.main(["--version"])
@@ -155,3 +175,19 @@ def test_version_is_reported(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_signal_return_code_uses_shell_convention() -> None:
     assert cli._shell_exit_code(-15) == 143
+
+
+@pytest.mark.parametrize("case", CLI_CASES, ids=[case["name"] for case in CLI_CASES])
+def test_shared_cli_contract(case: dict[str, Any], backend: type[RecordingBackend]) -> None:
+    try:
+        exit_code = cli.main(case["args"])
+    except SystemExit as exc:
+        exit_code = exc.code
+
+    assert exit_code == case["exitCode"]
+    if "status" in case:
+        [event] = backend.events
+        assert event.status == case["status"]
+        assert event.message == case["message"]
+    else:
+        assert backend.events == []

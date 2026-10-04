@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Cut a release: bump the version, tag it, and publish a GitHub Release.
-# The Release event triggers .github/workflows/publish.yml, which uploads to PyPI.
+# The Release event triggers .github/workflows/publish.yml, which uploads to PyPI and npm.
 #
 # Usage: make release VERSION=0.1.0  (or: uv run python scripts/release.py 0.1.0 [--dry-run])
 
@@ -12,12 +12,14 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from versions import shared_version
+
 BRANCH = "master"
 ROOT = Path(__file__).resolve().parent.parent
 CHANGELOG = ROOT / "CHANGELOG.md"
 UNRELEASED = "## [Unreleased]"
-VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?$")
-TRACKED_FILES = ["packages/python/pyproject.toml", "CHANGELOG.md", "packages/python/uv.lock"]
+VERSION_PATTERN = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+TRACKED_FILES = ["packages/python/pyproject.toml", "packages/python/uv.lock", "packages/nodejs/package.json", "packages/nodejs/package-lock.json", "CHANGELOG.md"]
 
 
 class ReleaseError(Exception):
@@ -40,7 +42,7 @@ def execute(*args: str, dry_run: bool) -> None:
 
 
 def check_tools() -> None:
-    for tool in ("git", "uv", "gh"):
+    for tool in ("git", "uv", "npm", "make", "gh"):
         if shutil.which(tool) is None:
             raise ReleaseError(f"{tool} is not installed")
 
@@ -84,7 +86,7 @@ def commit_and_tag(tag: str, dry_run: bool) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Tag a release and publish it to PyPI.")
+    parser = argparse.ArgumentParser(description="Tag a paired release for PyPI and npm.")
     parser.add_argument("version", help="version to release, e.g. 0.1.0")
     parser.add_argument("--dry-run", action="store_true", help="print every step without changing anything")
     args = parser.parse_args()
@@ -96,6 +98,9 @@ def main() -> int:
     try:
         if not VERSION_PATTERN.match(version):
             raise ReleaseError(f"'{version}' is not a valid version (expected X.Y.Z)")
+        current = shared_version()
+        if tuple(map(int, version.split("."))) <= tuple(map(int, current.split("."))):
+            raise ReleaseError("the release version must be greater than the current shared version")
         check_tools()
         check_repo(tag)
 
@@ -104,12 +109,18 @@ def main() -> int:
             print(f"warning: {CHANGELOG.name} has nothing under {UNRELEASED}", file=sys.stderr)
             notes = f"Release {tag}"
 
-        print(f"Releasing {read('uv', 'version', '--project', 'packages/python', '--short')} -> {version}")
+        print(f"Releasing both packages {current} -> {version}")
+        execute("make", "check", dry_run=dry_run)
+        execute("make", "test", dry_run=dry_run)
         execute("uv", "version", "--project", "packages/python", version, dry_run=dry_run)
+        execute("npm", "--prefix", "packages/nodejs", "version", version, "--no-git-tag-version", "--ignore-scripts", dry_run=dry_run)
+        if not dry_run:
+            shared_version()
+        execute("make", "build", dry_run=dry_run)
         open_changelog_section(version, dry_run=dry_run)
         commit_and_tag(tag, dry_run=dry_run)
         execute("gh", "release", "create", tag, "--title", tag, "--notes", notes, dry_run=dry_run)
-    except ReleaseError as error:
+    except (ReleaseError, ValueError, KeyError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 

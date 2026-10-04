@@ -6,6 +6,23 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- Add the TypeScript/Node.js package `@radajakub/clankers`, with asynchronous notifications,
+  task reporting, neutral and Star Wars themes, shared TOML/dotenv/environment configuration, and
+  injectable backends and logging. Publish CommonJS, ESM, and TypeScript declarations.
+- Verify shared configuration and notification-format fixtures in both packages and check package/lockfile versions in CI.
+- Build and publish both packages from one shared version and GitHub Release, with retry support.
+- Add the npm `clankers` executable with the same actions and configuration options as Python,
+  shared CLI fixtures, command exit-code preservation, and installed-executable validation.
+
+### Changed
+
+- Place Python and Node.js in sibling package directories, with shared documentation and root commands.
+- Release commands now validate and bump both packages; paired releases use stable `X.Y.Z` versions.
+- Align ntfy URL, topic, and timeout validation in Python and Node.js with shared validation fixtures.
+  Both reject redirects, send UTF-8 plain-text headers, and log status-only rejection diagnostics.
+
 ## [3.0.0] - 2026-10-04
 
 ### Added

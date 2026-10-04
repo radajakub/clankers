@@ -1,0 +1,12 @@
+[
+  { "name": "success notification", "args": ["rogerroger", "-m", "Deployment complete"], "exitCode": 0, "status": "rogerroger", "message": "Deployment complete" },
+  { "name": "neutral notification", "args": ["blastthem", "--message", "Deployment started"], "exitCode": 0, "status": "blastthem", "message": "Deployment started" },
+  { "name": "failure notification", "args": ["uhoh", "-m", "Deployment failed"], "exitCode": 0, "status": "uhoh", "message": "Deployment failed" },
+  { "name": "missing manual message", "args": ["rogerroger"], "exitCode": 2 },
+  { "name": "missing wrapped command", "args": ["engage", "--"], "exitCode": 2 },
+  { "name": "missing option value", "args": ["uhoh", "--message"], "exitCode": 2 },
+  { "name": "unknown option", "args": ["blastthem", "--missing"], "exitCode": 2 },
+  { "name": "unknown action", "args": ["missing"], "exitCode": 2 },
+  { "name": "help", "args": ["--help"], "exitCode": 0 },
+  { "name": "version", "args": ["--version"], "exitCode": 0 }
+]

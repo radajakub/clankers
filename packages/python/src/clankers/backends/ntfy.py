@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+import math
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 import requests
 
@@ -19,6 +22,46 @@ class NtfyBackend(Backend):
     topic: str | None = None  # topic for the NTFY backend
     timeout: float = 10.0  # timeout in seconds when unreachable
     token: str | None = field(default=None, repr=False)  # private-server access token
+
+    def _match_url(self) -> bool:
+        return re.match(r"^https?://", self.url, re.IGNORECASE) is not None
+
+    def _search_url(self) -> bool:
+        return re.search(r"[\s\\?#]", self.url) is not None
+
+    def _valid_topic(self) -> bool:
+        if self.topic is None:
+            return True
+        if not isinstance(self.topic, str):
+            return False
+
+        return self.topic == "" or re.fullmatch(r"[A-Za-z0-9_-]+", self.topic) is not None
+
+    def _valid_timeout(self) -> bool:
+        if isinstance(self.timeout, bool) or not isinstance(self.timeout, (int, float)):
+            return False
+
+        return 0 < self.timeout <= 2_147_483_647 / 1000 and math.isfinite(self.timeout)
+
+    def __post_init__(self) -> None:
+        try:
+            if not isinstance(self.url, str) or not self._match_url() or self._search_url():
+                raise ValueError
+
+            url = urlsplit(self.url)
+            if not url.hostname or url.username is not None or url.password is not None:
+                raise ValueError
+
+            # Accessing port also validates its syntax and range.
+            url.port
+        except ValueError:
+            raise ValueError("NTFY_URL must be HTTP or HTTPS without credentials, query, fragment, whitespace, or backslashes") from None
+
+        if not self._valid_topic():
+            raise ValueError("NTFY_TOPIC must contain only letters, numbers, underscores, or hyphens")
+
+        if not self._valid_timeout():
+            raise ValueError("notification timeout must be positive, finite, and no greater than 2147483.647 seconds")
 
     @classmethod
     def from_config(cls, config: Mapping[str, object]) -> NtfyBackend:
@@ -38,7 +81,7 @@ class NtfyBackend(Backend):
         return cls(url=url, topic=topic, timeout=timeout, token=token)
 
     def _build_headers(self) -> dict[str, str]:
-        headers = {"User-Agent": "clankers"}
+        headers = {"User-Agent": "clankers", "Content-Type": "text/plain; charset=utf-8"}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
@@ -48,29 +91,23 @@ class NtfyBackend(Backend):
 
     def send(self, event: Event) -> None:
         if not self.topic:
-            logger.warning("no ntfy topic configured, dropping notification: %s", event.message)
+            logger.warning("no ntfy topic configured, dropping notification")
             return
 
         url = self._build_url(self.topic)
         logger.debug("publishing to %s with a %ss timeout", url, self.timeout)
         try:
-            response = requests.post(
+            with requests.post(
                 url,
                 data=event.to_string().encode(),
                 headers=self._build_headers(),
                 timeout=self.timeout,
-            )
-            response.raise_for_status()
-        except requests.HTTPError as exc:
-            # Notifications are optional and must never affect the wrapped work.
-            logger.warning("ntfy rejected the notification: %s", _describe_response(exc.response))
-        except requests.RequestException as exc:
-            logger.warning("could not reach ntfy at %s: %s", url, exc)
-        else:
-            logger.debug("ntfy accepted the notification with status %s", response.status_code)
-
-
-def _describe_response(response: requests.Response | None) -> str:
-    if response is None:
-        return "no response"
-    return f"{response.status_code} {response.reason} {response.text.strip()[:200]}".strip()
+                allow_redirects=False,
+                stream=True,
+            ) as response:
+                if not 200 <= response.status_code < 300:
+                    logger.warning("ntfy rejected the notification: %s", response.status_code)
+                else:
+                    logger.debug("ntfy accepted the notification with status %s", response.status_code)
+        except requests.RequestException:
+            logger.warning("could not reach ntfy at %s", url)
