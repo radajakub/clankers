@@ -1,6 +1,6 @@
 {
   "name": "@radajakub/clankers",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Get notified when long-running Node.js tasks finish",
   "license": "MIT",
   "author": "Jakub Rada <dev.jakubrada@icloud.com>",
