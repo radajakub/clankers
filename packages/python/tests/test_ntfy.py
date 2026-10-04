@@ -182,9 +182,9 @@ def test_rejects_non_string_topics(topic: Any) -> None:
         NtfyBackend("https://ntfy.sh", topic=topic)
 
 
-@pytest.mark.parametrize("timeout", ["0", "-1", "nan", "inf", "2147483.648"])
+@pytest.mark.parametrize("timeout", ["0", "-1", "nan", "inf", "2147483.648", "1_0", "0x10", "1e3", "4.5s"])
 def test_validates_timeouts_from_configuration(timeout: str) -> None:
-    with pytest.raises(ValueError, match="timeout"):
+    with pytest.raises(ValueError, match="(?i)timeout"):
         NtfyBackend.from_config({"NTFY_URL": "https://ntfy.sh", "NTFY_TOPIC": "jobs", "NTFY_TIMEOUT": timeout})
 
 

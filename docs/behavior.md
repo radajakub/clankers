@@ -20,7 +20,8 @@ and clamped to zero. They render as `Xs`, `Xm Ys`, or `Xh Ym Zs`.
 ## Delivery
 
 Publish UTF-8 text with HTTP POST to the configured server and topic. The server and topic
-are required configuration; there is no implicit deployment default. The token is optional
+are required configuration; there is no implicit deployment default. An ntfy backend constructed
+directly in code may omit the topic; it then logs a warning and drops each notification. The token is optional
 and, when present, is sent as bearer authentication. The default delivery timeout is ten seconds.
 Tokens must not appear in diagnostics.
 
@@ -54,11 +55,13 @@ Node.js constructor options override this merged configuration. Both backends va
 absolute HTTP(S) URLs with a hostname, without credentials, query strings, fragments,
 whitespace, or backslashes. Nonempty topics contain only ASCII letters, numbers, underscores,
 and hyphens. Timeouts are finite, positive, and at most 2,147,483.647 seconds (2,147,483,647 ms).
+`NTFY_TIMEOUT` values are plain decimals such as `10` or `2.5`; other number syntaxes are rejected.
 Both run `contracts/ntfy-validation.json` to verify these rules. Python timeout arguments use
 seconds; Node.js timeout arguments use milliseconds.
 Backend configuration values from files are strings, including TOML timeout values.
 
-Python supports context managers and decorators. Node.js supports awaitable notification
+Python supports context managers (including `async with`) and decorators; async forms send
+notifications without blocking the event loop. Node.js supports awaitable notification
 methods and callback-based task wrappers. These APIs may differ while preserving this contract.
 
 ## Keeping implementations aligned
@@ -75,7 +78,8 @@ Both packages provide a `clankers` CLI with `engage`, `rogerroger`, `blastthem`,
 CLI options include `--config`, `--dotenv`, `--message` / `-m`, and `--verbose` / `-v`.
 Both verify `contracts/cli.json`. `engage` runs commands directly with inherited input and
 output, sends one completion notification, and preserves their exit code. Invalid configuration
-fails before work starts with exit code 2; commands that cannot start return 127. On Unix,
+or an empty message fails before work starts with exit code 2; commands that cannot start return 127.
+`SIGINT` and `SIGTERM` are forwarded to the command, which is still reported. On Unix,
 signal termination uses shell exit codes (128 plus the signal number); the notification reports
 the original negative signal code. Operating-system error descriptions may differ.
 

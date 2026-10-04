@@ -73,12 +73,11 @@ class NtfyBackend(Backend):
         if timeout_value is None:
             return cls(url=url, topic=topic, token=token)
 
-        try:
-            timeout = float(timeout_value)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("NTFY_TIMEOUT must be a number") from exc
+        # Plain decimals only, so both packages accept the same values (float() also takes "1_0" or "1e3").
+        if re.fullmatch(r"\s*([0-9]+(\.[0-9]*)?|\.[0-9]+)\s*", timeout_value) is None:
+            raise ValueError("NTFY_TIMEOUT must be a decimal number of seconds")
 
-        return cls(url=url, topic=topic, timeout=timeout, token=token)
+        return cls(url=url, topic=topic, timeout=float(timeout_value), token=token)
 
     def _build_headers(self) -> dict[str, str]:
         headers = {"User-Agent": "clankers", "Content-Type": "text/plain; charset=utf-8"}

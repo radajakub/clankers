@@ -81,7 +81,8 @@ export class Event {
 
 export function describe(error: unknown): string {
   try {
-    return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    if (!(error instanceof Error)) return String(error);
+    return error.message ? `${error.name}: ${error.message}` : error.name;
   } catch {
     return "unknown error";
   }

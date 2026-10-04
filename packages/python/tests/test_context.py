@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import pytest
@@ -39,6 +40,31 @@ def test_context_manager_reports_and_reraises_exception(backend: RecordingBacken
             raise RuntimeError("broken")
 
     assert backend.reported == [("uhoh", "Training: RuntimeError: broken")]
+
+
+def test_exception_without_a_message_is_described_by_its_type(backend: RecordingBackend) -> None:
+    with pytest.raises(RuntimeError):
+        with clankers.Engage("Training", announce=False):
+            raise RuntimeError()
+
+    assert backend.reported == [("uhoh", "Training: RuntimeError")]
+
+
+def test_async_context_manager_reports_success_and_failure(backend: RecordingBackend) -> None:
+    async def succeed() -> None:
+        async with clankers.Engage("Training"):
+            await asyncio.sleep(0)
+
+    async def fail() -> None:
+        async with clankers.Engage("Training", announce=False):
+            raise RuntimeError("broken")
+
+    asyncio.run(succeed())
+    with pytest.raises(RuntimeError, match="broken"):
+        asyncio.run(fail())
+
+    assert backend.reported == [("blastthem", "Training"), ("rogerroger", "Training"), ("uhoh", "Training: RuntimeError: broken")]
+    assert backend.events[1].duration >= 0
 
 
 def test_builders_describe_every_phase(backend: RecordingBackend) -> None:

@@ -59,7 +59,7 @@ TypeScript consumers, and the CLI. The [Node.js development guide](packages/node
 also shows how to run the local archive before publishing.
 
 CI groups lint/type checks, tests, and package validation into one job per language,
-with Node.js checked on versions 22 and 24. A shared job checks versions and repository formatting.
+with Python checked on versions 3.12 and 3.13 and Node.js on versions 22 and 24. A shared job checks versions and repository formatting.
 
 ## Releases
 

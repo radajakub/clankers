@@ -5,14 +5,16 @@ from __future__ import annotations
 import argparse
 import logging
 import shlex
+import signal
 import subprocess
 import sys
+import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from importlib import metadata
 from typing import cast
 
-from clankers.config import ConfigError
 from clankers.core.clanker import Clanker
 from clankers.core.models import Event, Status
 
@@ -64,13 +66,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     command = _command(args.command) if args.action == "engage" else []
     if args.action == "engage" and not command:
         parser.error("a command is required")
+    if args.message is not None and not args.message.strip():
+        parser.error("message cannot be empty")
 
     clanker = Clanker(config_path=args.config, dotenv_path=args.dotenv)
     try:
         # Build the backend and theme before the command runs, so a broken configuration fails early.
         clanker.backend
         clanker.theme
-    except (ConfigError, ValueError) as exc:
+    except ValueError as exc:
         print(f"clankers: {exc}", file=sys.stderr)
         return 2
 
@@ -93,13 +97,29 @@ def _command(arguments: list[str]) -> list[str]:
 
 def _run(command: list[str]) -> tuple[int, OSError | None, float]:
     started_at = time.monotonic()
-    error: OSError | None = None
     try:
-        exit_code = subprocess.run(command, check=False).returncode
+        process = subprocess.Popen(command)
     except OSError as exc:
-        exit_code, error = 127, exc
         print(f"clankers: could not run {command[0]!r}: {exc}", file=sys.stderr)
-    return exit_code, error, time.monotonic() - started_at
+        return 127, exc, time.monotonic() - started_at
+    with _forward_signals(process):
+        exit_code = process.wait()
+    return exit_code, None, time.monotonic() - started_at
+
+
+@contextmanager
+def _forward_signals(process: subprocess.Popen[bytes]) -> Iterator[None]:
+    # Let the command decide how to stop, so it is not orphaned and its result is still reported.
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    signals = (signal.SIGINT, signal.SIGTERM)
+    previous = {signum: signal.signal(signum, lambda signum, _frame: process.send_signal(signum)) for signum in signals}
+    try:
+        yield
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
 
 
 def _shell_exit_code(return_code: int) -> int:

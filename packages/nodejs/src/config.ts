@@ -131,10 +131,12 @@ export function configuredTheme(options: Configuration, config: Config): Theme {
 export function ntfyOptions(options: Configuration, config: Config): NtfyOptions {
   const url = options.url ?? optionalString(config, "NTFY_URL");
   const topic = options.topic ?? optionalString(config, "NTFY_TOPIC");
-  if (!url) throw new Error("missing required configuration value NTFY_URL");
-  if (!topic) throw new Error("missing required configuration value NTFY_TOPIC");
+  if (!url) throw new ConfigError("missing required configuration value NTFY_URL");
+  if (!topic) throw new ConfigError("missing required configuration value NTFY_TOPIC");
   const token = options.token ?? optionalString(config, "NTFY_TOKEN");
   const timeout = options.timeoutMs === undefined ? optionalString(config, "NTFY_TIMEOUT") : undefined;
+  // Plain decimals only, so both packages accept the same values (Number() also takes "0x10" or "1e3").
+  if (timeout !== undefined && !/^\s*([0-9]+(\.[0-9]*)?|\.[0-9]+)\s*$/.test(timeout)) throw new ConfigError("NTFY_TIMEOUT must be a decimal number of seconds");
   const timeoutMs = options.timeoutMs ?? (timeout === undefined ? 10_000 : Number(timeout) * 1000);
   return { url, topic, timeoutMs, ...(token ? { token } : {}) };
 }

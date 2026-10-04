@@ -81,8 +81,10 @@ function parse(argv: readonly string[]): Arguments | undefined {
       continue;
     }
     const { key, value } = parseOption(argument, tokens);
-    if (key === "message") settings.message = value;
-    else settings.options[key] = value;
+    if (key === "message") {
+      if (!value.trim()) throw new Error("message cannot be empty");
+      settings.message = value;
+    } else settings.options[key] = value;
   }
   if (action === "engage") throw new Error("a command is required");
   if (settings.message === undefined) throw new Error("--message is required");
@@ -135,26 +137,35 @@ function completionMessage(args: Extract<Arguments, { action: "engage" }>, resul
   return `${message} (exit code ${result.code})${result.error ? `: ${describe(result.error)}` : ""}`;
 }
 
+function prepare(argv: readonly string[]): { args: Arguments; clanker: Clanker } | undefined {
+  const args = parse(argv);
+  if (!args) return;
+  const diagnostic = (message: string) => console.error(`clankers: ${message}`);
+  const clanker = new Clanker({ ...args.options, logger: { warn: diagnostic, ...(args.verbose ? { debug: diagnostic } : {}) } });
+  // Validate before starting work, as in the Python CLI.
+  clanker.backend;
+  clanker.theme;
+  return { args, clanker };
+}
+
 export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<number> {
+  let prepared: ReturnType<typeof prepare>;
+  // Only invalid arguments or configuration exit with 2; once work starts, its exit code is kept.
   try {
-    const args = parse(argv);
-    if (!args) return 0;
-    const diagnostic = (message: string) => console.error(`clankers: ${message}`);
-    const clanker = new Clanker({ ...args.options, logger: { warn: diagnostic, ...(args.verbose ? { debug: diagnostic } : {}) } });
-    // Validate before starting work, as in the Python CLI.
-    clanker.backend;
-    clanker.theme;
-    if (args.action !== "engage") {
-      await clanker.notify(args.action, args.message);
-      return 0;
-    }
-    const result = await run(args.command);
-    await clanker.send(Event.of(result.code === 0 ? "rogerroger" : "uhoh", completionMessage(args, result), result.duration));
-    return result.code < 0 ? 128 - result.code : result.code;
+    prepared = prepare(argv);
   } catch (error) {
     console.error(`clankers: ${error instanceof Error ? error.message : "invalid configuration or arguments"}`);
     return 2;
   }
+  if (!prepared) return 0;
+  const { args, clanker } = prepared;
+  if (args.action !== "engage") {
+    await clanker.notify(args.action, args.message);
+    return 0;
+  }
+  const result = await run(args.command);
+  await clanker.send(Event.of(result.code === 0 ? "rogerroger" : "uhoh", completionMessage(args, result), result.duration));
+  return result.code < 0 ? 128 - result.code : result.code;
 }
 
 if (require.main === module)

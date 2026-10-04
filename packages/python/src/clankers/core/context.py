@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from types import TracebackType
@@ -36,8 +37,7 @@ class Engage:
 
     def __enter__(self) -> Engage:
         self._started_at = time.monotonic()
-        if self.announce:
-            self.clanker.blastthem(self._build(self._start, self.message))
+        self._announce()
         return self
 
     def __exit__(
@@ -46,11 +46,22 @@ class Engage:
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> bool:
-        if self._started_at is None:
-            raise RuntimeError("engage context was exited before it was entered")
-        duration = time.monotonic() - self._started_at
-        self._started_at = None
-        self._report(exc, duration)
+        self._report(exc, self._finish())
+        return False
+
+    # Sending is blocking network I/O, so the async form runs it in a worker thread instead of the event loop.
+    async def __aenter__(self) -> Engage:
+        self._started_at = time.monotonic()
+        await asyncio.to_thread(self._announce)
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool:
+        await asyncio.to_thread(self._report, exc, self._finish())
         return False
 
     def rogerroger(self, message: str, duration: float | None = None) -> None:
@@ -61,6 +72,17 @@ class Engage:
 
     def uhoh(self, message: str, duration: float | None = None) -> None:
         self.clanker.uhoh(message, duration)
+
+    def _announce(self) -> None:
+        if self.announce:
+            self.clanker.blastthem(self._build(self._start, self.message))
+
+    def _finish(self) -> float:
+        if self._started_at is None:
+            raise RuntimeError("engage context was exited before it was entered")
+        duration = time.monotonic() - self._started_at
+        self._started_at = None
+        return duration
 
     def _report(self, exc: BaseException | None, duration: float) -> None:
         if exc is None:

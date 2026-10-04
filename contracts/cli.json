@@ -4,6 +4,8 @@
   { "name": "failure notification", "args": ["uhoh", "-m", "Deployment failed"], "exitCode": 0, "status": "uhoh", "message": "Deployment failed" },
   { "name": "missing manual message", "args": ["rogerroger"], "exitCode": 2 },
   { "name": "missing wrapped command", "args": ["engage", "--"], "exitCode": 2 },
+  { "name": "blank manual message", "args": ["rogerroger", "-m", "  "], "exitCode": 2 },
+  { "name": "blank wrapped message", "args": ["engage", "-m", "", "--", "clankers-contract-missing-command"], "exitCode": 2 },
   { "name": "missing option value", "args": ["uhoh", "--message"], "exitCode": 2 },
   { "name": "unknown option", "args": ["blastthem", "--missing"], "exitCode": 2 },
   { "name": "unknown action", "args": ["missing"], "exitCode": 2 },

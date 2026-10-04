@@ -23,7 +23,7 @@ NTFY_TOKEN=tk_your_private_access_token
 Both `NTFY_URL` and `NTFY_TOPIC` are required; clankers does not provide deployment defaults in
 code. Server URLs must be absolute HTTP(S) URLs without credentials, query strings,
 fragments, whitespace, or backslashes. Topic names may contain ASCII letters, numbers, underscores,
-and hyphens. `NTFY_TIMEOUT` is a finite positive number of seconds, up to 2,147,483.647 seconds.
+and hyphens. `NTFY_TIMEOUT` is a positive decimal number of seconds (such as `10` or `2.5`), up to 2,147,483.647 seconds.
 Redirects are rejected; configure the final publish URL directly. You can instead create
 `~/.config/clankers/config.toml` (or `$XDG_CONFIG_HOME/clankers/config.toml`):
 
@@ -43,7 +43,8 @@ its own settings. Sources are merged in this order of priority:
 
 Settings themselves never come from the command line — only the files they live in do. Clankers
 searches for `.env` from the working directory upward; use `--dotenv` to select one directly, and
-`--config` to select a different TOML file.
+`--config` to select a different TOML file. Missing files supply no settings, including files
+selected explicitly; malformed TOML produces a configuration error.
 
 ## CLI
 
@@ -59,8 +60,9 @@ Clankers' own flags must come before the command; everything after the first non
 after `--`) belongs to the wrapped command. The wrapped command keeps its standard input and output.
 Clankers reports its duration and result, then returns the command's exit code. Without `--message`
 the report is the command line itself. Delivery failures produce warnings without changing
-the wrapped command's exit code. Invalid configuration exits with status 2 before starting
-the command; an executable that cannot start returns 127. On Unix, a command terminated by a
+the wrapped command's exit code. Invalid configuration or an empty `--message` exits with status 2
+before starting the command; an executable that cannot start returns 127. `SIGINT` and `SIGTERM`
+are forwarded to the command, which is still reported. On Unix, a command terminated by a
 signal returns `128 + signal number`. Commands execute directly; invoke a shell explicitly
 when you need pipes, redirects, or other shell syntax.
 
@@ -112,6 +114,13 @@ with clankers.Engage("Training", announce=False):  # report only the outcome
     train()
 ```
 
+In async code, use `async with` so sending notifications does not block the event loop:
+
+```python
+async with clankers.Engage("Evaluation"):
+    await evaluate()
+```
+
 Each phase can build its message when it is sent, instead of naming it up front. Pass a callable
 that takes no arguments and returns the message; it reads whatever the surrounding scope holds at
 that moment. The failure builder receives the exception. A phase without a builder reports the
@@ -134,6 +143,10 @@ Builders run when the notification is sent, so `success` and `failure` report th
 whatever they close over — that is the point of them, and it is up to the caller to keep that state
 readable. A builder that fails or returns nothing is logged and the plain message is sent instead;
 it never breaks the block it reports on.
+
+An `Engage` object tracks one run at a time. Reuse it for runs that follow each other, but create
+a new one for runs that overlap, such as in threads, tasks, or nested blocks. The decorator already
+creates one per call.
 
 The block can also send notifications of its own while it runs, at any of the three levels. These
 are extra: the block still reports its own outcome when it exits.
@@ -162,7 +175,7 @@ async def evaluate(): ...
 ```
 
 Normal completion sends success. An exception sends failure and is re-raised unchanged. Async
-functions are supported as decorators as well. Configuration is read the first time a notification is
+functions are supported as decorators as well, and send notifications without blocking the event loop. Configuration is read the first time a notification is
 sent, so decorating a function never fails at import time; a missing configuration or an unreachable
 ntfy server is logged and never affects the wrapped work.
 
@@ -179,6 +192,10 @@ process. Point it somewhere else — or hand it a ready backend — with `config
 ```python
 clankers.configure(config_path="./clankers.toml")
 ```
+
+A ready backend can be any object with `send(event)`, such as `clankers.backends.NtfyBackend`.
+Configuration requires a topic, but an `NtfyBackend` built in code may omit it; it then logs a
+warning and drops each notification.
 
 For a process that reports to more than one topic, build clankers of your own; a `Clanker` owns a
 backend and sends notifications, and everything that wraps work takes one with `clanker=`:

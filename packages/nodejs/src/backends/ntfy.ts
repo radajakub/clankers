@@ -69,6 +69,7 @@ export class NtfyBackend implements Backend {
       return;
     }
     const url = `${this.url}/${this.topic}`;
+    const body = event.toString();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     log(this.logger, "debug", `publishing to ${url} with a ${this.timeoutMs}ms timeout`);
@@ -76,7 +77,7 @@ export class NtfyBackend implements Backend {
       const response = await fetch(url, {
         method: "POST",
         headers: this.headers(),
-        body: event.toString(),
+        body,
         signal: controller.signal,
         redirect: "manual",
       });
@@ -86,7 +87,8 @@ export class NtfyBackend implements Backend {
       } else {
         log(this.logger, "debug", `ntfy accepted the notification with status ${response.status}`);
       }
-      await response.body?.cancel();
+      // A failed cleanup is not a delivery failure.
+      await response.body?.cancel().catch(() => undefined);
     } catch {
       log(this.logger, "warn", `could not reach ntfy at ${url}`);
     } finally {
