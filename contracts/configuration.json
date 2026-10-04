@@ -1,0 +1,80 @@
+[
+  {
+    "name": "TOML tables and theme",
+    "toml": "[ntfy]\nurl = \"https://ntfy.example.com\"\ntopic = \"jobs\"\ntoken = \"file-token\"\ntimeout = \"4.5\"\n[clankers]\ntheme = \"starwars\"\n",
+    "env": {},
+    "expected": {
+      "NTFY_URL": "https://ntfy.example.com",
+      "NTFY_TOPIC": "jobs",
+      "NTFY_TOKEN": "file-token",
+      "NTFY_TIMEOUT": "4.5",
+      "CLANKERS_THEME": "starwars"
+    }
+  },
+  {
+    "name": "dotenv overrides environment and TOML",
+    "toml": "[ntfy]\nurl = \"https://toml.example\"\ntopic = \"toml\"\n",
+    "env": {
+      "NTFY_URL": "https://env.example",
+      "NTFY_TOPIC": "env"
+    },
+    "dotenv": "NTFY_URL=https://dotenv.example\nNTFY_TOPIC=dotenv\n",
+    "expected": {
+      "NTFY_URL": "https://dotenv.example",
+      "NTFY_TOPIC": "dotenv"
+    }
+  },
+  {
+    "name": "empty values preserve lower priority settings",
+    "toml": "[ntfy]\ntopic = \"toml\"\n[clankers]\ntheme = \"starwars\"\n",
+    "env": {
+      "NTFY_TOPIC": "env",
+      "CLANKERS_THEME": "",
+      "UNRELATED": "ignored"
+    },
+    "dotenv": "NTFY_TOPIC=\nCLANKERS_THEME=\nUNASSIGNED\n",
+    "expected": {
+      "NTFY_TOPIC": "env",
+      "CLANKERS_THEME": "starwars"
+    }
+  },
+  {
+    "name": "nested tables retain other backends and numeric types",
+    "toml": "[slack]\nwebhook_url = \"https://hooks.example\"\n[ntfy]\ntimeout = 4\n",
+    "env": {},
+    "expected": {
+      "SLACK_WEBHOOK_URL": "https://hooks.example",
+      "NTFY_TIMEOUT": 4
+    }
+  },
+  {
+    "name": "dotenv interpolation uses earlier file values and environment",
+    "env": {
+      "NTFY_TOPIC": "environment",
+      "CLANKERS_CONTRACT_SOURCE": "remote"
+    },
+    "dotenv": "PREFIX=local\nNTFY_TOPIC=${PREFIX}-${CLANKERS_CONTRACT_SOURCE}\nNTFY_TOKEN=${CLANKERS_CONTRACT_MISSING:-fallback}\nLITERAL=$PREFIX\n",
+    "expected": {
+      "CLANKERS_CONTRACT_SOURCE": "remote",
+      "NTFY_TOPIC": "local-remote",
+      "NTFY_TOKEN": "fallback",
+      "PREFIX": "local",
+      "LITERAL": "$PREFIX"
+    }
+  },
+  {
+    "name": "quoted dotenv comments and multiline values",
+    "env": {},
+    "dotenv": "export NTFY_TOPIC=\"jobs\" # comment\nNTFY_TOKEN='token#literal'\nNOTE=\"first\\nsecond\"\n",
+    "expected": {
+      "NTFY_TOPIC": "jobs",
+      "NTFY_TOKEN": "token#literal",
+      "NOTE": "first\nsecond"
+    }
+  },
+  {
+    "name": "missing files supply no deployment defaults",
+    "env": {},
+    "expected": {}
+  }
+]

@@ -1,12 +1,16 @@
 name: Publish
 
-# Publishes to PyPI when a GitHub Release is published (see scripts/release.py).
-# Uses PyPI Trusted Publishing (OIDC) — no API token is stored.
-# One-time setup on PyPI: add a trusted publisher for project "clankers" with
-#   owner=radajakub, repository=clankers, workflow=publish.yml, environment=pypi.
+# Keep this filename: PyPI and npm Trusted Publishing are registered against it.
 on:
   release:
     types: [published]
+
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -14,45 +18,73 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Verify tag matches the package version
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install development dependencies
         run: |
-          version="$(uv version --project packages/python --short)"
-          tag="${GITHUB_REF_NAME#v}"
-          if [ "$version" != "$tag" ]; then
-            echo "tag $GITHUB_REF_NAME does not match pyproject version $version" >&2
-            exit 1
-          fi
-
-      - name: Build wheel and sdist
-        run: uv build --project packages/python --out-dir dist
-
-      - name: Check package metadata
-        run: uvx twine check dist/*
-
-      - name: Upload build artifacts
+          uv sync --project packages/python --group dev --python 3.13
+          npm ci --prefix packages/nodejs
+      - name: Verify shared version and release tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: uv run --project packages/python python scripts/versions.py --tag "$RELEASE_TAG"
+      - name: Check both packages
+        run: make check
+      - name: Test both packages
+        run: make test
+      - name: Build and validate both packages
+        run: make build
+      - name: Upload Python artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/
+          name: python-dist
+          path: dist/python/
+      - name: Upload npm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodejs-dist
+          path: dist/nodejs/*.tgz
 
-  publish:
+  publish-python:
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/p/clankers
     permissions:
-      id-token: write # required for trusted publishing
+      id-token: write
     steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: python-dist
           path: dist/
-
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+  publish-nodejs:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@radajakub/clankers
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - name: Install npm with Trusted Publishing support
+        run: npm install --global npm@11.19.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: nodejs-dist
+          path: dist/nodejs/
+      - name: Publish to npm, or verify the identical archive on retry
+        run: node packages/nodejs/scripts/publish.mjs dist/nodejs/*.tgz

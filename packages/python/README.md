@@ -21,7 +21,10 @@ NTFY_TOKEN=tk_your_private_access_token
 ```
 
 Both `NTFY_URL` and `NTFY_TOPIC` are required; clankers does not provide deployment defaults in
-code. You can instead create
+code. Server URLs must be absolute HTTP(S) URLs without credentials, query strings,
+fragments, whitespace, or backslashes. Topic names may contain ASCII letters, numbers, underscores,
+and hyphens. `NTFY_TIMEOUT` is a finite positive number of seconds, up to 2,147,483.647 seconds.
+Redirects are rejected; configure the final publish URL directly. You can instead create
 `~/.config/clankers/config.toml` (or `$XDG_CONFIG_HOME/clankers/config.toml`):
 
 ```toml
@@ -35,7 +38,7 @@ The loader returns normalized key/value pairs such as `NTFY_URL`; each backend s
 its own settings. Sources are merged in this order of priority:
 
 1. `.env`
-2. process environment variables (only those prefixed `NTFY_`)
+2. process environment variables (those prefixed `NTFY_` or `CLANKERS_`)
 3. `~/.config/clankers/config.toml`
 
 Settings themselves never come from the command line — only the files they live in do. Clankers
@@ -55,7 +58,11 @@ clankers engage -m "nightly training" -- uv run train.py --epochs 100
 Clankers' own flags must come before the command; everything after the first non-flag argument (or
 after `--`) belongs to the wrapped command. The wrapped command keeps its standard input and output.
 Clankers reports its duration and result, then returns the command's exit code. Without `--message`
-the report is the command line itself. An unreachable notification server is silently ignored.
+the report is the command line itself. Delivery failures produce warnings without changing
+the wrapped command's exit code. Invalid configuration exits with status 2 before starting
+the command; an executable that cannot start returns 127. On Unix, a command terminated by a
+signal returns `128 + signal number`. Commands execute directly; invoke a shell explicitly
+when you need pipes, redirects, or other shell syntax.
 
 Send a notification on its own — at the end of a shell script, or from a Makefile. There are three
 levels: `rogerroger` reports success, `blastthem` reports neutral progress, `uhoh` reports failure.
@@ -66,6 +73,18 @@ clankers rogerroger -m "deploy finished"
 clankers uhoh -m "deploy failed"
 ```
 
+| Argument                  | Behavior                                                                           |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `-m`, `--message message` | Required for manual notifications; overrides the command line reported by `engage` |
+| `--config path`           | Select a TOML configuration file                                                   |
+| `--dotenv path`           | Select a `.env` file instead of searching parent directories                       |
+| `-v`, `--verbose`         | Log configuration discovery and delivery diagnostics to stderr                     |
+| `-h`, `--help`            | Show help without configuring ntfy                                                 |
+| `--version`               | Show the installed version without configuring ntfy                                |
+| `--`                      | End wrapper options and start the command and its arguments                        |
+
+Relative configuration paths and `.env` discovery use the directory where you run the CLI.
+
 `clankers --version` prints the installed version. Delivery problems are reported on stderr —
 a rejected or unreachable server never changes the exit code — and `-v` logs every file clankers
 reads and every request it makes:
@@ -75,7 +94,7 @@ $ clankers rogerroger -m "deploy finished" -v
 clankers: reading .env file /home/you/project/.env
 clankers: configuration provides NTFY_TOKEN, NTFY_TOPIC, NTFY_URL
 clankers: publishing to https://ntfy.example.com/deploys with a 10.0s timeout
-clankers: ntfy rejected the notification: 403 Forbidden {"code":40301,"error":"forbidden"}
+clankers: ntfy rejected the notification: 403
 ```
 
 ## Python
@@ -212,25 +231,17 @@ Run development and release commands from the repository root.
 
 ```bash
 uv sync --project packages/python --group dev
-make check   # ruff lint + format check + prettier
+npm ci --prefix packages/nodejs
+make check   # Python lint, TypeScript checks, formatting, and shared versions
 make fix     # autofix and reformat
-make test    # pytest
-make build   # wheel + sdist into dist/, validated with twine
+make test    # Both packages and release-tool tests
+make build   # Python distributions + npm archive, validated for both packages
 ```
+
+Use `make check-python`, `make test-python`, and `make build-python` to target Python only.
 
 ## Releasing
 
-`make release VERSION=0.1.0` runs `scripts/release.py`, which bumps the version in `packages/python/pyproject.toml`,
-opens a dated section in `CHANGELOG.md`, commits, tags `v0.1.0`, pushes, and publishes a GitHub
-Release. The Release event triggers `.github/workflows/publish.yml`, which builds and uploads to PyPI
-via Trusted Publishing. It refuses to run unless you are on `master` with a clean tree in sync with
-origin and the tag is unused.
-
-Use `make release-dry-run VERSION=0.1.0` first to print every step without changing anything.
-
-Describe changes under `## [Unreleased]` in `CHANGELOG.md` before releasing — that section becomes
-the release notes.
-
-One-time setup on [pypi.org](https://pypi.org/manage/account/publishing/): add a trusted publisher
-for project `clankers` with owner `radajakub`, repository `clankers`, workflow `publish.yml` and
-environment `pypi`.
+Both packages use one shared version, the root `CHANGELOG.md`, and a paired release process.
+Run release commands from the repository root. See
+[release setup and recovery](https://github.com/radajakub/clankers/blob/master/docs/releasing.md).

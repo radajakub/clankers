@@ -1,0 +1,230 @@
+[
+  {
+    "name": "valid URL https://ntfy.sh",
+    "url": "https://ntfy.sh",
+    "topic": "jobs",
+    "valid": true
+  },
+  {
+    "name": "valid URL http://localhost:8080",
+    "url": "http://localhost:8080",
+    "topic": "jobs",
+    "valid": true
+  },
+  {
+    "name": "valid URL https://ntfy.example.com/base///",
+    "url": "https://ntfy.example.com/base///",
+    "topic": "jobs",
+    "valid": true
+  },
+  {
+    "name": "valid URL http://[::1]:8080/base",
+    "url": "http://[::1]:8080/base",
+    "topic": "jobs",
+    "valid": true
+  },
+  {
+    "name": "invalid URL 0",
+    "url": "invalid",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 1",
+    "url": "ftp://ntfy.sh",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 2",
+    "url": "https://",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 3",
+    "url": "https://user:secret@example.com",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 4",
+    "url": "https://@ntfy.sh",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 5",
+    "url": "https://ntfy.sh?token=secret",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 6",
+    "url": "https://ntfy.sh?",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 7",
+    "url": "https://ntfy.sh#",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 8",
+    "url": "https://ntfy.sh#secret",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 9",
+    "url": "https://ntfy.sh:bad",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 10",
+    "url": "https://ntfy.sh:65536",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 11",
+    "url": "https://ntfy.sh/path with spaces",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 12",
+    "url": "https://ntfy.sh/\\other",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "invalid URL 13",
+    "url": "https:ntfy.sh",
+    "topic": "jobs",
+    "valid": false,
+    "field": "NTFY_URL"
+  },
+  {
+    "name": "valid topic 'Jobs_2026-release'",
+    "url": "https://ntfy.sh",
+    "topic": "Jobs_2026-release",
+    "valid": true
+  },
+  {
+    "name": "valid topic ''",
+    "url": "https://ntfy.sh",
+    "topic": "",
+    "valid": true
+  },
+  {
+    "name": "invalid topic '../other'",
+    "url": "https://ntfy.sh",
+    "topic": "../other",
+    "valid": false,
+    "field": "NTFY_TOPIC"
+  },
+  {
+    "name": "invalid topic 'a/b'",
+    "url": "https://ntfy.sh",
+    "topic": "a/b",
+    "valid": false,
+    "field": "NTFY_TOPIC"
+  },
+  {
+    "name": "invalid topic 'jobs?token=secret'",
+    "url": "https://ntfy.sh",
+    "topic": "jobs?token=secret",
+    "valid": false,
+    "field": "NTFY_TOPIC"
+  },
+  {
+    "name": "invalid topic 'jobs#other'",
+    "url": "https://ntfy.sh",
+    "topic": "jobs#other",
+    "valid": false,
+    "field": "NTFY_TOPIC"
+  },
+  {
+    "name": "invalid topic 'jobs topic'",
+    "url": "https://ntfy.sh",
+    "topic": "jobs topic",
+    "valid": false,
+    "field": "NTFY_TOPIC"
+  },
+  {
+    "name": "invalid topic 'žluťoučký'",
+    "url": "https://ntfy.sh",
+    "topic": "žluťoučký",
+    "valid": false,
+    "field": "NTFY_TOPIC"
+  },
+  {
+    "name": "invalid topic 'jobs\\n'",
+    "url": "https://ntfy.sh",
+    "topic": "jobs\n",
+    "valid": false,
+    "field": "NTFY_TOPIC"
+  },
+  {
+    "name": "timeout 0.001",
+    "url": "https://ntfy.sh",
+    "topic": "jobs",
+    "timeoutSeconds": 0.001,
+    "valid": true
+  },
+  {
+    "name": "timeout 3.5",
+    "url": "https://ntfy.sh",
+    "topic": "jobs",
+    "timeoutSeconds": 3.5,
+    "valid": true
+  },
+  {
+    "name": "timeout 2147483.647",
+    "url": "https://ntfy.sh",
+    "topic": "jobs",
+    "timeoutSeconds": 2147483.647,
+    "valid": true
+  },
+  {
+    "name": "timeout 0",
+    "url": "https://ntfy.sh",
+    "topic": "jobs",
+    "timeoutSeconds": 0,
+    "valid": false,
+    "field": "timeout"
+  },
+  {
+    "name": "timeout -1",
+    "url": "https://ntfy.sh",
+    "topic": "jobs",
+    "timeoutSeconds": -1,
+    "valid": false,
+    "field": "timeout"
+  },
+  {
+    "name": "timeout 2147483.648",
+    "url": "https://ntfy.sh",
+    "topic": "jobs",
+    "timeoutSeconds": 2147483.648,
+    "valid": false,
+    "field": "timeout"
+  }
+]

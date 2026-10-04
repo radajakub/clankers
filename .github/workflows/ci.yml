@@ -10,7 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
+  python:
+    name: Python
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,43 +24,49 @@ jobs:
       - name: Sync dependencies
         run: uv sync --project packages/python --group dev --python 3.13
 
-      - name: Ruff lint
-        run: uv run --project packages/python ruff check --config packages/python/pyproject.toml packages/python scripts
-
-      - name: Ruff format check
-        run: uv run --project packages/python ruff format --config packages/python/pyproject.toml --check packages/python scripts
-
-      - name: Prettier format check
-        run: npx --yes prettier@3.9.6 --check .
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Sync dependencies
-        run: uv sync --project packages/python --group dev --python 3.13
+      - name: Lint and format check
+        run: make check-python
 
       - name: Run tests
-        run: uv run --project packages/python --group dev pytest -q packages/python/tests
+        run: make test-python
 
-  build:
+      - name: Build and validate package
+        run: make build-python
+
+  nodejs:
+    name: Node.js (${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: packages/nodejs/package-lock.json
+      - name: Install dependencies
+        run: npm ci --prefix packages/nodejs
+      - name: Type check
+        run: make check-nodejs
+      - name: Test shared behavior and Node.js APIs
+        run: make test-nodejs
+      - name: Build and validate installed package and declarations
+        run: make build-nodejs
+
+  shared:
+    name: Shared checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
         with:
-          enable-cache: true
-
-      - name: Build wheel and sdist
-        run: uv build --project packages/python --out-dir dist
-
-      - name: Check package metadata
-        run: uvx twine check dist/*
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify both packages and lockfiles have the same version
+        run: python scripts/versions.py
+      - name: Prettier format check
+        run: npx --yes prettier@3.9.6 --check .

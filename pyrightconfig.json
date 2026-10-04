@@ -1,0 +1,6 @@
+{
+  "include": ["packages/python/src", "packages/python/tests", "scripts"],
+  "extraPaths": ["packages/python/src"],
+  "venvPath": "packages/python",
+  "venv": ".venv"
+}
