@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-04
+
 ### Added
 
 - Add a configurable theme for notification text. The default `neutral` theme labels notifications
