@@ -75,3 +75,47 @@ def test_delivery_failures_are_logged_and_swallowed(caplog: pytest.LogCaptureFix
         clankers.Clanker(backend=BrokenBackend()).rogerroger("done")
 
     assert "offline" in caplog.text
+
+
+def test_theme_defaults_to_neutral() -> None:
+    recording = RecordingBackend()
+
+    clankers.Clanker(backend=recording).rogerroger("done")
+
+    assert recording.events[0].theme == "neutral"
+    assert "Done: done" in recording.events[0].to_string()
+
+
+def test_theme_is_read_from_the_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    recording = RecordingBackend()
+    monkeypatch.setenv("CLANKERS_THEME", "starwars")
+
+    clankers.Clanker(backend=recording).rogerroger("done")
+
+    assert "Roger, roger: done" in recording.events[0].to_string()
+
+
+def test_an_explicit_theme_wins_over_the_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    recording = RecordingBackend()
+    monkeypatch.setenv("CLANKERS_THEME", "starwars")
+
+    clankers.configure(backend=recording, theme="neutral")
+    clankers.rogerroger("done")
+
+    assert recording.events[0].theme == "neutral"
+
+
+def test_an_unknown_theme_is_rejected_up_front() -> None:
+    with pytest.raises(ValueError, match="unknown theme"):
+        clankers.Clanker(theme="startrek")  # type: ignore[arg-type]
+
+
+def test_an_unknown_configured_theme_is_logged_and_swallowed(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    recording = RecordingBackend()
+    monkeypatch.setenv("CLANKERS_THEME", "startrek")
+
+    with caplog.at_level(logging.WARNING, logger="clankers.core.clanker"):
+        clankers.Clanker(backend=recording).rogerroger("done")
+
+    assert recording.events == []
+    assert "unknown theme" in caplog.text

@@ -80,8 +80,8 @@ clankers: ntfy rejected the notification: 403 Forbidden {"code":40301,"error":"f
 
 ## Python
 
-`clankers.Engage` wraps a block and reports around it: `Blast them` when the block starts, then
-`Roger, roger` or `Uh-oh` when it ends, with the duration.
+`clankers.Engage` wraps a block and reports around it: a `blastthem` notification when the block
+starts, then `rogerroger` or `uhoh` when it ends, with the duration.
 
 ```python
 import clankers
@@ -191,6 +191,20 @@ clankers.uhoh("Validation loss diverged", duration=4200)
 
 All three take the same optional `duration=` and, like everything else, only warn when the
 notification cannot be delivered.
+
+## Theme
+
+Notifications are labelled `Done`, `Info` and `Failed` by default. For the droid experience, set the
+theme to `starwars` and they read `Roger, roger`, `Blast them!` and `Uh-oh` instead:
+
+```toml
+[clankers]
+theme = "starwars"
+```
+
+`CLANKERS_THEME=starwars` works too, in the environment or a `.env` file, and follows the same
+priority as the ntfy settings. In Python, `Clanker(theme=...)` and `configure(theme=...)` override
+the configuration. An unknown theme makes the CLI exit with status 2 before it runs the command.
 
 ## Development
 

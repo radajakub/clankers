@@ -4,6 +4,7 @@ from pathlib import Path
 
 from clankers.backends.backend import Backend
 from clankers.core.clanker import Clanker
+from clankers.core.themes import Theme
 
 _default: Clanker | None = None
 
@@ -20,9 +21,10 @@ def configure(
     config_path: str | Path | None = None,
     dotenv_path: str | Path | None = None,
     backend: Backend | None = None,
+    theme: Theme | None = None,
 ) -> Clanker:
     global _default
-    _default = Clanker(config_path=config_path, dotenv_path=dotenv_path, backend=backend)
+    _default = Clanker(config_path=config_path, dotenv_path=dotenv_path, backend=backend, theme=theme)
     return _default
 
 
