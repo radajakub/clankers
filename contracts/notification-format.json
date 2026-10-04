@@ -1,0 +1,122 @@
+[
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": null,
+    "expected": "(host) Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "blastthem",
+    "theme": "neutral",
+    "duration": null,
+    "expected": "(host) Info: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "uhoh",
+    "theme": "neutral",
+    "duration": null,
+    "expected": "(host) Failed: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "starwars",
+    "duration": null,
+    "expected": "(host) Roger, roger: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "blastthem",
+    "theme": "starwars",
+    "duration": null,
+    "expected": "(host) Blast them!: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "uhoh",
+    "theme": "starwars",
+    "duration": null,
+    "expected": "(host) Uh-oh: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": 0,
+    "expected": "(host) [0s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": -1,
+    "expected": "(host) [0s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": 0.5,
+    "expected": "(host) [0s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": 1.5,
+    "expected": "(host) [2s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": 2.5,
+    "expected": "(host) [2s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": 59.5,
+    "expected": "(host) [1m 0s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": 134,
+    "expected": "(host) [2m 14s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Task complete",
+    "status": "rogerroger",
+    "theme": "neutral",
+    "duration": 3725,
+    "expected": "(host) [1h 2m 5s] Done: Task complete"
+  },
+  {
+    "hostname": "host",
+    "message": "Příliš žluťoučký 🚀\nSecond line",
+    "status": "blastthem",
+    "theme": "neutral",
+    "duration": null,
+    "expected": "(host) Info: Příliš žluťoučký 🚀\nSecond line"
+  }
+]

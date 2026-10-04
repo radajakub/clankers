@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CHANGELOG = ROOT / "CHANGELOG.md"
 UNRELEASED = "## [Unreleased]"
 VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?$")
-TRACKED_FILES = ["pyproject.toml", "CHANGELOG.md", "uv.lock"]
+TRACKED_FILES = ["packages/python/pyproject.toml", "CHANGELOG.md", "packages/python/uv.lock"]
 
 
 class ReleaseError(Exception):
@@ -104,8 +104,8 @@ def main() -> int:
             print(f"warning: {CHANGELOG.name} has nothing under {UNRELEASED}", file=sys.stderr)
             notes = f"Release {tag}"
 
-        print(f"Releasing {read('uv', 'version', '--short')} -> {version}")
-        execute("uv", "version", version, dry_run=dry_run)
+        print(f"Releasing {read('uv', 'version', '--project', 'packages/python', '--short')} -> {version}")
+        execute("uv", "version", "--project", "packages/python", version, dry_run=dry_run)
         open_changelog_section(version, dry_run=dry_run)
         commit_and_tag(tag, dry_run=dry_run)
         execute("gh", "release", "create", tag, "--title", tag, "--notes", notes, dry_run=dry_run)

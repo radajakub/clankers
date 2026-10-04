@@ -21,13 +21,13 @@ jobs:
           enable-cache: true
 
       - name: Sync dependencies
-        run: uv sync --group dev --python 3.13
+        run: uv sync --project packages/python --group dev --python 3.13
 
       - name: Ruff lint
-        run: uv run ruff check .
+        run: uv run --project packages/python ruff check --config packages/python/pyproject.toml packages/python scripts
 
       - name: Ruff format check
-        run: uv run ruff format --check .
+        run: uv run --project packages/python ruff format --config packages/python/pyproject.toml --check packages/python scripts
 
       - name: Prettier format check
         run: npx --yes prettier@3.9.6 --check .
@@ -43,10 +43,10 @@ jobs:
           enable-cache: true
 
       - name: Sync dependencies
-        run: uv sync --group dev --python 3.13
+        run: uv sync --project packages/python --group dev --python 3.13
 
       - name: Run tests
-        run: uv run --group dev pytest -q
+        run: uv run --project packages/python --group dev pytest -q packages/python/tests
 
   build:
     runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
           enable-cache: true
 
       - name: Build wheel and sdist
-        run: uv build
+        run: uv build --project packages/python --out-dir dist
 
       - name: Check package metadata
         run: uvx twine check dist/*
