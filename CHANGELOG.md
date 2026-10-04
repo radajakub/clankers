@@ -6,6 +6,22 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- Add a configurable theme for notification text. The default `neutral` theme labels notifications
+  `Done`, `Info` and `Failed`; `theme = "starwars"` under `[clankers]` in `config.toml`, or
+  `CLANKERS_THEME=starwars`, restores `Roger, roger`, `Blast them!` and `Uh-oh`. `Clanker` and
+  `configure` take `theme=`. Names in code and on the command line are unchanged.
+- Collect process environment variables prefixed `CLANKERS_` alongside `NTFY_`.
+- Add `Event.is_success`, `Event.is_info` and `Event.is_failure` to check an event's status without
+  comparing strings.
+
+### Changed
+
+- Notifications use the neutral labels unless the Star Wars theme is configured.
+- A `Clanker` reads its configuration once for both the backend and the theme, so one built with a
+  `backend=` now reads the configuration files the first time it sends, to find its theme.
+
 ## [2.0.0] - 2026-09-19
 
 ### Added

@@ -67,8 +67,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     clanker = Clanker(config_path=args.config, dotenv_path=args.dotenv)
     try:
-        # Build the backend before the command runs, so a broken configuration fails early.
+        # Build the backend and theme before the command runs, so a broken configuration fails early.
         clanker.backend
+        clanker.theme
     except (ConfigError, ValueError) as exc:
         print(f"clankers: {exc}", file=sys.stderr)
         return 2

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 import clankers
@@ -16,6 +18,14 @@ class RecordingBackend:
     @property
     def reported(self) -> list[tuple[str, str]]:
         return [(event.status, event.message) for event in self.events]
+
+
+@pytest.fixture(autouse=True)
+def isolate_configuration(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # Keep the developer's own config, .env and theme out of every test.
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.delenv("CLANKERS_THEME", raising=False)
+    monkeypatch.chdir(tmp_path)
 
 
 @pytest.fixture(autouse=True)

@@ -87,6 +87,25 @@ def test_manual_notifications_report_every_status(backend: type[RecordingBackend
     ]
 
 
+def test_cli_uses_the_configured_theme(backend: type[RecordingBackend], tmp_path: Path) -> None:
+    dotenv_path = tmp_path / "notifications.env"
+    dotenv_path.write_text("CLANKERS_THEME=starwars\n")
+
+    cli.main(["rogerroger", "-m", "done", "--dotenv", str(dotenv_path)])
+
+    assert backend.events[0].theme == "starwars"
+
+
+def test_cli_reports_an_unknown_theme(backend: type[RecordingBackend], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setenv("CLANKERS_THEME", "startrek")
+
+    exit_code = cli.main(["engage", sys.executable, "-c", "raise SystemExit(5)"])
+
+    assert exit_code == 2
+    assert "unknown theme" in capsys.readouterr().err
+    assert backend.events == []
+
+
 def test_manual_notifications_require_a_message(backend: type[RecordingBackend]) -> None:
     with pytest.raises(SystemExit) as failure:
         cli.main(["rogerroger"])

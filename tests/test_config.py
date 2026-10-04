@@ -95,3 +95,11 @@ def test_only_clankers_environment_variables_are_collected(tmp_path: Path) -> No
     config = load_config(path=tmp_path / "missing.toml", env={"PATH": "/usr/bin", "NTFY_TOPIC": "jobs"})
 
     assert config == {"NTFY_TOPIC": "jobs"}
+
+
+def test_clankers_settings_come_from_toml_and_the_environment(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text('[clankers]\ntheme = "starwars"\n')
+
+    assert load_config(path=path, env={}) == {"CLANKERS_THEME": "starwars"}
+    assert load_config(path=path, env={"CLANKERS_THEME": "neutral"}) == {"CLANKERS_THEME": "neutral"}

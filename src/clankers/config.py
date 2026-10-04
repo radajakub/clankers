@@ -12,16 +12,15 @@ logger = logging.getLogger(__name__)
 
 Config = dict[str, object]
 
-# Process environment variables are only picked up under this prefix so that the
-# configuration mapping stays a description of clankers, not a copy of os.environ.
-ENV_PREFIX = "NTFY_"
+# Process environment variables are only picked up under these prefixes so that the configuration mapping stays a description of clankers, not a copy of os.environ.
+ENV_PREFIXES = ("NTFY_", "CLANKERS_")
 
 
 class ConfigError(ValueError):
     pass
 
 
-def default_config_path(env: dict[str, str] | None = None) -> Path:
+def default_config_path(env: Mapping[str, str] | None = None) -> Path:
     environ = os.environ if env is None else env
     if xdg_home := environ.get("XDG_CONFIG_HOME"):
         return Path(xdg_home).expanduser() / "clankers" / "config.toml"
@@ -46,7 +45,7 @@ def load_config(
     return values
 
 
-def _config_path(path: str | Path | None, env: dict[str, str]) -> Path:
+def _config_path(path: str | Path | None, env: Mapping[str, str]) -> Path:
     if path is not None:
         return Path(path).expanduser()
     return default_config_path(env)
@@ -76,11 +75,11 @@ def _flatten(values: dict[str, object], prefix: str = "") -> Config:
     return flattened
 
 
-def _environment_values(env: dict[str, str]) -> Config:
-    return {key: value for key, value in env.items() if key.startswith(ENV_PREFIX) and value != ""}
+def _environment_values(env: Mapping[str, str]) -> Config:
+    return {key: value for key, value in env.items() if key.startswith(ENV_PREFIXES) and value != ""}
 
 
-def _defined_values(values: dict[str, object | None]) -> Config:
+def _defined_values(values: Mapping[str, object | None]) -> Config:
     return {key: value for key, value in values.items() if value is not None and value != ""}
 
 

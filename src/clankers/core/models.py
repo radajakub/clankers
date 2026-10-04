@@ -2,15 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from socket import gethostname
-from typing import Literal
 
-Status = Literal["rogerroger", "blastthem", "uhoh"]
-
-_LABELS: dict[Status, str] = {
-    "rogerroger": "Roger, roger",
-    "blastthem": "Blast them!",
-    "uhoh": "Uh-oh",
-}
+from clankers.core.themes import Status, Theme, label, validated_theme
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,10 +12,12 @@ class Event:
     status: Status
     duration: float | None = None
     hostname: str = field(default_factory=gethostname)
+    theme: Theme = "neutral"
 
     def __post_init__(self) -> None:
         if not self.message.strip():
             raise ValueError("event message cannot be empty")
+        validated_theme(self.theme)
 
     @staticmethod
     def of(status: Status, message: str, duration: float | None = None) -> Event:
@@ -50,9 +45,18 @@ class Event:
 
         return cls.uhoh(message if exc is None else f"{message}: {describe(exc)}", duration)
 
+    def is_success(self) -> bool:
+        return self.status == "rogerroger"
+
+    def is_info(self) -> bool:
+        return self.status == "blastthem"
+
+    def is_failure(self) -> bool:
+        return self.status == "uhoh"
+
     def to_string(self) -> str:
         duration = "" if self.duration is None else f" [{format_duration(self.duration)}]"
-        return f"({self.hostname}){duration} {_LABELS[self.status]}: {self.message}"
+        return f"({self.hostname}){duration} {label(self.theme, self.status)}: {self.message}"
 
 
 def describe(exc: BaseException) -> str:
